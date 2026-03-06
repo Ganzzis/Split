@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Делёжка счёта</title>
 
-  <!-- PWA Manifest -->
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi0KDQuNCz0L7QstC+0LLRgdC60LDRjyDQuNC90LjRgdC60L7Qs9C+Iiwi c2hvcnRfbmFtZSI6IlNwbGl0Iiwic3RhcnRfdXJsIjoiLi9pbmRleC5odG1sIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YyZjJmNyIsInRoZW1lX2NvbG9yIjoiIzAwN2FmZiIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn0seyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,689 +22,306 @@
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
     }
-
     .container { max-width: 500px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
-
     h1 { text-align: center; font-weight: 600; margin-bottom: 28px; font-size: 28px; }
     h3 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
-
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .person-item {
-      position: relative;
-      background: #f9f9fb;
-      border: 1px solid #e5e5ea;
-      border-radius: 12px;
-      padding: 12px 14px 12px 54px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-    .person-item::before {
-      content: attr(data-num);
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 32px;
-      height: 32px;
-      background: #007aff;
-      color: white;
-      border-radius: 50%;
-      font-size: 16px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .transfer-item {
-      background: #f9f9fb;
-      border: 1px solid #e5e5ea;
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 12px;
-    }
-
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 0;
-    }
-
-    input, select {
-      flex: 1 1 auto;
-      min-width: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-
-    input[type="number"] {
-      -moz-appearance: textfield;
-    }
-    
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .arrow {
-      font-size: 18px;
-      color: #8e8e93;
-      padding: 0 4px;
-    }
-
-    button {
-      border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 15px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    
-    button:active {
-      opacity: 0.7;
-    }
-
+    .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .person-item { position: relative; background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px 12px 54px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .person-item::before { content: attr(data-num); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; background: #007aff; color: white; border-radius: 50%; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+    .transfer-item { background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    input, select { flex: 1 1 auto; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; box-sizing: border-box; }
+    .arrow { font-size: 20px; color: #8e8e93; padding: 0 4px; line-height: 1; }
+    button { border: none; border-radius: 10px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
     .btn { background: #007aff; color: white; }
     .btn-gray { background: #8e8e93; color: white; }
-    .btn-delete {
-      flex: 0 0 36px;
-      width: 36px;
-      height: 36px;
-      padding: 0;
-      font-size: 20px;
-      line-height: 36px;
-      background: #ff3b30;
-      color: white;
-      border-radius: 10px;
-    }
-
-    .balance-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .balance-table th, .balance-table td {
-      padding: 10px 8px;
-      text-align: left;
-      border-bottom: 1px solid #e5e5ea;
-    }
-
-    .balance-table th {
-      font-weight: 600;
-      color: #8e8e93;
-      font-size: 14px;
-    }
-
-    .balance-table td {
-      font-size: 15px;
-    }
-
-    .balance-pos { color: #34c759; }
-    .balance-neg { color: #ff3b30; }
-
-    .actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .result-line { 
-      padding: 6px 0; 
-      border-bottom: 1px solid #eee; 
-    }
-    
-    .result-line:last-child {
-      border-bottom: none;
-    }
-
-    @supports (padding-top: env(safe-area-inset-top)) {
-      body { padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px; }
-    }
-    
-    .warning {
-      color: #ff3b30;
-      font-size: 14px;
-      margin-top: 8px;
-      text-align: center;
-    }
-    
-    .total-row {
-      font-weight: 600;
-      background-color: #f5f5f5;
-    }
+    .btn-delete { flex: 0 0 36px; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 36px; background: #ff3b30; color: white; border-radius: 10px; }
+    .balance-table { width: 100%; border-collapse: collapse; }
+    .balance-table th, .balance-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e5e5ea; }
+    .balance-table th { font-weight: 600; color: #8e8e93; font-size: 14px; }
+    .balance-table td { font-size: 15px; }
+    .balance-pos { color: #34c759; font-weight: 600; }
+    .balance-neg { color: #ff3b30; font-weight: 600; }
+    .actions { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+    .result-line { padding: 6px 0; border-bottom: 1px solid #eee; }
+    @supports (padding-top: env(safe-area-inset-top)) { body { padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px; } }
   </style>
 </head>
-
 <body>
 
 <div class="container">
-
-  <h1>🍽️ Делёжка счёта</h1>
+  <h1>Делёжка счёта</h1>
 
   <div class="card">
-    <h3>👥 Участники</h3>
+    <h3>Участники</h3>
     <div id="people"></div>
-    <button class="btn" onclick="addPerson()">➕ Добавить участника</button>
+    <button class="btn" onclick="addPerson()">Добавить</button>
   </div>
 
   <div class="card">
-    <h3>💸 Переводы</h3>
+    <h3>Переводы</h3>
     <div id="transfers"></div>
-    <button class="btn" onclick="addTransfer()">🔄 Добавить перевод</button>
+    <button class="btn" onclick="addTransfer()">Добавить</button>
   </div>
 
   <div class="card">
     <div class="actions">
-      <button class="btn" onclick="calculate()">🧮 Рассчитать</button>
-      <button class="btn-gray" onclick="share()">📤 Поделиться</button>
+      <button class="btn" onclick="calculate()">Рассчитать</button>
+      <button class="btn-gray" onclick="share()">Поделиться</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>📊 Баланс</h3>
+    <h3>Баланс</h3>
     <div id="balances"></div>
   </div>
 
   <div class="card">
-    <h3>💰 Кто кому должен</h3>
+    <h3>Кто кому должен</h3>
     <div id="result"></div>
   </div>
-
 </div>
 
 <script>
-// Состояние приложения
 let people = [];
 let transfers = [];
+window.lastShare = null;
 
-// Сохранение в localStorage
 function save() {
-  try {
-    localStorage.setItem("split_people", JSON.stringify(people));
-    localStorage.setItem("split_transfers", JSON.stringify(transfers));
-  } catch (e) {
-    console.warn('Не удалось сохранить данные:', e);
-  }
+  localStorage.setItem("split_people", JSON.stringify(people));
+  localStorage.setItem("split_transfers", JSON.stringify(transfers));
 }
 
-// Загрузка из localStorage
 function load() {
-  try {
-    let p = localStorage.getItem("split_people");
-    let t = localStorage.getItem("split_transfers");
-    if (p) people = JSON.parse(p) || [];
-    if (t) transfers = JSON.parse(t) || [];
-  } catch (e) {
-    console.warn('Не удалось загрузить данные:', e);
-    people = [];
-    transfers = [];
-  }
+  let p = localStorage.getItem("split_people");
+  let t = localStorage.getItem("split_transfers");
+  if (p) people = JSON.parse(p);
+  if (t) transfers = JSON.parse(t);
   render();
 }
 
-// Функции для работы с участниками
-function addPerson() {
-  people.push({ name: `Участник ${people.length + 1}`, paid: 0 });
-  render();
+function getValidPeople() {
+  return people.filter(p => p.name && p.name.trim()).map(p => p.name.trim());
 }
 
-function removePerson(index) {
-  if (index < 0 || index >= people.length) return;
-  
-  const nameToRemove = people[index].name;
-  people.splice(index, 1);
-  
-  // Удаляем переводы, связанные с этим участником
-  transfers = transfers.filter(t => 
-    t.from !== nameToRemove && t.to !== nameToRemove
-  );
-  
-  render();
-}
-
-function updatePersonName(index, value) {
-  if (index < 0 || index >= people.length) return;
-  
-  const oldName = people[index].name;
-  const newName = value.trim() || `Участник ${index + 1}`;
-  
-  // Проверка на дубликат имени
-  if (people.some((p, i) => i !== index && p.name === newName)) {
-    alert('❌ Участник с таким именем уже существует');
-    render();
-    return;
-  }
-  
-  people[index].name = newName;
-  
-  // Обновляем имена в переводах
-  transfers = transfers.map(t => ({
-    from: t.from === oldName ? newName : t.from,
-    to: t.to === oldName ? newName : t.to,
-    amount: t.amount
-  }));
-  
-  render();
-}
-
-function updatePersonPaid(index, value) {
-  if (index < 0 || index >= people.length) return;
-  
-  const numValue = parseFloat(value);
-  people[index].paid = isNaN(numValue) ? 0 : Math.max(0, numValue);
-  render();
-}
-
-// Функции для работы с переводами
-function addTransfer() {
-  if (people.length < 2) {
-    alert("❌ Нужно минимум 2 участника для создания перевода");
-    return;
-  }
-  
-  // Находим двух разных участников
-  let from = people[0]?.name || "";
-  let to = people[1]?.name || "";
-  
-  transfers.push({ 
-    from: from, 
-    to: to, 
-    amount: 0 
-  });
-  
-  render();
-}
-
-function removeTransfer(index) {
-  if (index < 0 || index >= transfers.length) return;
-  transfers.splice(index, 1);
-  render();
-}
-
-function updateTransferFrom(index, value) {
-  if (index < 0 || index >= transfers.length) return;
-  
-  if (value === transfers[index].to) {
-    alert("⚠️ Нельзя переводить самому себе");
-    render();
-    return;
-  }
-  
-  transfers[index].from = value;
-  render();
-}
-
-function updateTransferTo(index, value) {
-  if (index < 0 || index >= transfers.length) return;
-  
-  if (value === transfers[index].from) {
-    alert("⚠️ Нельзя переводить самому себе");
-    render();
-    return;
-  }
-  
-  transfers[index].to = value;
-  render();
-}
-
-function updateTransferAmount(index, value) {
-  if (index < 0 || index >= transfers.length) return;
-  
-  const numValue = parseFloat(value);
-  transfers[index].amount = isNaN(numValue) ? 0 : Math.max(0, numValue);
-  render();
-}
-
-// Функция рендеринга
 function render() {
-  renderPeople();
-  renderTransfers();
-  save();
-}
-
-function renderPeople() {
-  let peopleDiv = document.getElementById("people");
-  if (!peopleDiv) return;
-  
+  const peopleDiv = document.getElementById("people");
   peopleDiv.innerHTML = "";
 
-  if (people.length === 0) {
-    peopleDiv.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">👥 Добавьте участников</div>';
-    return;
-  }
-
   people.forEach((p, i) => {
-    const name = p.name || `Участник ${i + 1}`;
-    const paid = p.paid || 0;
-    
+    const name = (p.name || "").trim().replace(/"/g, "&quot;");
+    const paid = Math.max(0, Number(p.paid) || 0);
+
     peopleDiv.innerHTML += `
-      <div class="person-item" data-num="${i+1}">
+      <div class="person-item" data-num="${i + 1}">
         <div class="row">
-          <input type="text" value="${escapeHtml(name)}" 
-                 onchange="updatePersonName(${i}, this.value)" 
-                 placeholder="Имя">
-          <input type="number" value="${paid}" 
-                 onchange="updatePersonPaid(${i}, this.value)" 
-                 placeholder="Сумма" min="0" step="0.01">
-          <button class="btn-delete" onclick="removePerson(${i})" title="Удалить">×</button>
+          <input value="${name}" onchange="updatePersonName(${i}, this.value)" placeholder="Имя">
+          <input type="number" min="0" value="${paid}" onchange="updatePersonPaid(${i}, this.value)">
+          <button class="btn-delete" onclick="removePerson(${i})">×</button>
         </div>
       </div>
     `;
   });
+
+  renderTransfers();
 }
 
 function renderTransfers() {
-  let div = document.getElementById("transfers");
-  if (!div) return;
-  
+  const div = document.getElementById("transfers");
   div.innerHTML = "";
 
-  if (transfers.length === 0) {
-    div.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">💱 Добавьте переводы между участниками</div>';
-    return;
-  }
+  const names = getValidPeople();
 
-  const personNames = people.map(p => p.name || "—").filter(name => name && name !== "—");
-  
+  // Удаляем недействительные переводы
+  transfers = transfers.filter(t => names.includes(t.from) && names.includes(t.to));
+
   transfers.forEach((t, i) => {
-    const from = t.from || "";
-    const to = t.to || "";
-    const amount = t.amount || 0;
-    
-    let optionsFrom = '';
-    let optionsTo = '';
-    
-    personNames.forEach(name => {
-      optionsFrom += `<option value="${escapeHtml(name)}" ${name === from ? 'selected' : ''}>${escapeHtml(name)}</option>`;
-      optionsTo += `<option value="${escapeHtml(name)}" ${name === to ? 'selected' : ''}>${escapeHtml(name)}</option>`;
-    });
+    let opts1 = names.map(n => `<option ${n === t.from ? 'selected' : ''}>${n}</option>`).join("");
+    let opts2 = names.map(n => `<option ${n === t.to ? 'selected' : ''}>${n}</option>`).join("");
 
     div.innerHTML += `
       <div class="transfer-item">
         <div class="row">
-          <select onchange="updateTransferFrom(${i}, this.value)" ${personNames.length === 0 ? 'disabled' : ''}>
-            <option value="">— выберите —</option>
-            ${optionsFrom}
-          </select>
+          <select onchange="updateTransferFrom(${i}, this.value)">${opts1 || '<option disabled>—</option>'}</select>
           <span class="arrow">→</span>
-          <select onchange="updateTransferTo(${i}, this.value)" ${personNames.length === 0 ? 'disabled' : ''}>
-            <option value="">— выберите —</option>
-            ${optionsTo}
-          </select>
-          <input type="number" value="${amount}" 
-                 onchange="updateTransferAmount(${i}, this.value)" 
-                 placeholder="Сумма" min="0" step="0.01">
-          <button class="btn-delete" onclick="removeTransfer(${i})" title="Удалить">×</button>
+          <select onchange="updateTransferTo(${i}, this.value)">${opts2 || '<option disabled>—</option>'}</select>
+          <input type="number" min="0" value="${Math.max(0, t.amount || 0)}" onchange="updateTransferAmount(${i}, this.value)">
+          <button class="btn-delete" onclick="removeTransfer(${i})">×</button>
         </div>
       </div>
     `;
   });
+
+  save();
 }
 
-// Функция для экранирования HTML
-function escapeHtml(unsafe) {
-  if (!unsafe) return '';
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function addPerson() {
+  people.push({ name: "", paid: 0 });
+  render();
 }
 
-// ИСПРАВЛЕННАЯ функция расчета
+function removePerson(i) {
+  const removedName = people[i]?.name?.trim();
+  people.splice(i, 1);
+  if (removedName) {
+    transfers = transfers.filter(t => t.from !== removedName && t.to !== removedName);
+  }
+  render();
+}
+
+function updatePersonName(i, v) {
+  const trimmed = v.trim();
+  if (trimmed && people.some((p, idx) => idx !== i && p.name.trim() === trimmed)) {
+    alert("Имя уже используется");
+    return;
+  }
+  people[i].name = trimmed;
+  render();
+}
+
+function updatePersonPaid(i, v) {
+  people[i].paid = Math.max(0, parseFloat(v) || 0);
+  save();
+}
+
+function addTransfer() {
+  const names = getValidPeople();
+  if (names.length < 2) return alert("Нужно минимум 2 человека с именами");
+  transfers.push({ from: names[0], to: names[1], amount: 0 });
+  renderTransfers();
+}
+
+function removeTransfer(i) {
+  transfers.splice(i, 1);
+  renderTransfers();
+}
+
+function updateTransferFrom(i, v) {
+  transfers[i].from = v;
+  save();
+}
+
+function updateTransferTo(i, v) {
+  transfers[i].to = v;
+  save();
+}
+
+function updateTransferAmount(i, v) {
+  transfers[i].amount = Math.max(0, parseFloat(v) || 0);
+  save();
+}
+
 function calculate() {
-  if (people.length === 0) {
-    document.getElementById("balances").innerHTML = '<div style="text-align: center; color: #8e8e93;">👥 Добавьте участников</div>';
-    document.getElementById("result").innerHTML = '';
+  const validPeople = people.filter(p => p.name && p.name.trim());
+  if (validPeople.length < 1) {
+    document.getElementById("balances").innerHTML = "<p>Добавьте участников с именами</p>";
+    document.getElementById("result").innerHTML = "";
     return;
   }
 
-  // 1. Сколько каждый заплатил изначально
-  let paid = {};
-  people.forEach(p => {
-    const name = p.name || `Участник ${people.indexOf(p) + 1}`;
-    paid[name] = p.paid || 0;
+  let totalCents = 0;
+  const balancesCents = {};
+  const actualCents = {};
+
+  validPeople.forEach(p => {
+    const cents = Math.round(p.paid * 100);
+    const name = p.name.trim();
+    balancesCents[name] = cents;
+    actualCents[name] = cents;
+    totalCents += cents;
   });
 
-  // 2. Общая сумма и доля каждого
-  let total = Object.values(paid).reduce((a, b) => a + b, 0);
-  let share = total / people.length;
-
-  // 3. Базовый баланс (кто сколько переплатил/недоплатил)
-  let balance = {};
-  for (let name in paid) {
-    balance[name] = paid[name] - share;
-  }
-
-  // 4. Учитываем переводы между участниками
   transfers.forEach(t => {
-    if (t.from && t.to && t.amount > 0 && t.from !== t.to) {
-      // Отправитель отдает деньги (его баланс уменьшается)
-      if (balance[t.from] !== undefined) {
-        balance[t.from] -= t.amount;
-      }
-      // Получатель принимает деньги (его баланс увеличивается)
-      if (balance[t.to] !== undefined) {
-        balance[t.to] += t.amount;
-      }
-    }
+    const amt = Math.round(t.amount * 100);
+    if (t.from in actualCents) actualCents[t.from] += amt;
+    if (t.to in actualCents) actualCents[t.to] -= amt;
+    if (t.from in balancesCents) balancesCents[t.from] += amt;
+    if (t.to in balancesCents) balancesCents[t.to] -= amt;
   });
 
-  // 5. Считаем фактические траты (с учетом переводов)
-  let actualPaid = {};
-  for (let name in paid) {
-    actualPaid[name] = paid[name];
-  }
-  
-  transfers.forEach(t => {
-    if (t.from && t.to && t.amount > 0) {
-      if (actualPaid[t.from] !== undefined) {
-        actualPaid[t.from] -= t.amount;
-      }
-      if (actualPaid[t.to] !== undefined) {
-        actualPaid[t.to] += t.amount;
-      }
-    }
-  });
+  const shareCents = Math.floor(totalCents / validPeople.length);
 
-  // 6. Формируем таблицу баланса
-  let html = '<table class="balance-table"><thead><tr><th>Имя</th><th>Доля</th><th>Внёс</th><th>Разница</th></tr></thead><tbody>';
+  // Таблица баланса
+  let tableHtml = '<table class="balance-table"><thead><tr><th>Имя</th><th>Доля</th><th>Внёс</th><th>Разница</th></tr></thead><tbody>';
 
-  people.forEach(p => {
-    const name = p.name || `Участник ${people.indexOf(p) + 1}`;
-    const should = share;
-    const actual = actualPaid[name] || 0;
-    const diff = balance[name] || 0;
-    
-    const shouldFormatted = should.toFixed(2);
-    const actualFormatted = actual.toFixed(2);
-    const diffFormatted = Math.abs(diff).toFixed(2);
-    
-    let diffClass = "";
-    let diffSign = "";
-    
-    if (diff > 0.01) {
-      diffClass = "balance-pos";
-      diffSign = "+";
-    } else if (diff < -0.01) {
-      diffClass = "balance-neg";
-      diffSign = "-";
-    }
+  validPeople.forEach(p => {
+    const name = p.name.trim();
+    const shouldRub = shareCents / 100;
+    const actualRub = (actualCents[name] || 0) / 100;
+    const diffRub = actualRub - shouldRub;
 
-    html += `
+    const cls = diffRub > 0.009 ? "balance-pos" : (diffRub < -0.009 ? "balance-neg" : "");
+    const sign = diffRub > 0.009 ? "+" : (diffRub < -0.009 ? "" : "");
+
+    tableHtml += `
       <tr>
-        <td>${escapeHtml(name)}</td>
-        <td>${shouldFormatted} ₽</td>
-        <td>${actualFormatted} ₽</td>
-        <td class="${diffClass}">${diffSign}${diffFormatted} ₽</td>
+        <td>${name}</td>
+        <td>${shouldRub.toFixed(2)} ₽</td>
+        <td>${actualRub.toFixed(2)} ₽</td>
+        <td class="${cls}">${sign}${diffRub.toFixed(2)} ₽</td>
       </tr>
     `;
   });
+  tableHtml += '</tbody></table>';
 
-  html += '</tbody></table>';
-  html += `<div style="text-align: right; margin-top: 10px; font-weight: 600;">Итого: ${total.toFixed(2)} ₽</div>`;
+  // Кто кому должен
+  let creditors = [];
+  let debtors = [];
 
-  // 7. Расчет долгов (кто кому должен)
-  let creditors = []; // положительный баланс (должны получить)
-  let debtors = [];   // отрицательный баланс (должны отдать)
-  
-  for (let name in balance) {
-    const v = balance[name];
-    if (v > 0.01) creditors.push({name: name, amount: v});
-    if (v < -0.01) debtors.push({name: name, amount: -v});
+  for (const name in balancesCents) {
+    let diffCents = balancesCents[name] - shareCents;
+    let rub = Math.round(diffCents) / 100;
+    if (rub > 0.01) creditors.push({ name, amount: rub });
+    if (rub < -0.01) debtors.push({ name, amount: -rub });
   }
 
-  // Сортировка по убыванию суммы
-  creditors.sort((a, b) => b.amount - a.amount);
-  debtors.sort((a, b) => b.amount - a.amount);
+  creditors.sort((a,b) => b.amount - a.amount);
+  debtors.sort((a,b) => b.amount - a.amount);
 
-  let transactions = [];
+  let debts = [];
+  let di = 0, ci = 0;
+  while (di < debtors.length && ci < creditors.length) {
+    let d = debtors[di];
+    let c = creditors[ci];
+    let pay = Math.min(d.amount, c.amount);
+    pay = Math.round(pay * 100) / 100;
 
-  // Жадный алгоритм распределения долгов
-  while (debtors.length > 0 && creditors.length > 0) {
-    let debtor = debtors[0];
-    let creditor = creditors[0];
-    
-    let amount = Math.min(debtor.amount, creditor.amount);
-    amount = Math.round(amount * 100) / 100;
-    
-    if (amount > 0) {
-      transactions.push({
-        from: debtor.name,
-        to: creditor.name,
-        amount: amount
-      });
-      
-      debtor.amount = Math.round((debtor.amount - amount) * 100) / 100;
-      creditor.amount = Math.round((creditor.amount - amount) * 100) / 100;
+    if (pay >= 0.01) {
+      debts.push(`${d.name} → ${c.name} : ${pay.toFixed(2)} ₽`);
     }
-    
-    if (debtor.amount < 0.01) debtors.shift();
-    if (creditor.amount < 0.01) creditors.shift();
+
+    d.amount -= pay;
+    c.amount -= pay;
+
+    if (d.amount < 0.01) di++;
+    if (c.amount < 0.01) ci++;
   }
 
-  // Форматируем результат
-  let result = [];
-  if (transactions.length > 0) {
-    result = transactions.map(t => 
-      `${escapeHtml(t.from)} → ${escapeHtml(t.to)} : ${t.amount.toFixed(2)} ₽`
-    );
-  } else {
-    result = ['✅ Все всё уже оплатили'];
-  }
+  document.getElementById("balances").innerHTML = tableHtml;
+  document.getElementById("result").innerHTML = debts.length > 0
+    ? debts.map(d => `<div class="result-line">${d}</div>`).join("")
+    : "<p>Все рассчитано поровну</p>";
 
-  document.getElementById("balances").innerHTML = html;
-  document.getElementById("result").innerHTML = result.map(r => `<div class="result-line">${r}</div>`).join("");
-
-  // Сохраняем результат для функции share
-  window.lastShare = transactions.map(t => `${t.from} → ${t.to} : ${t.amount.toFixed(2)} ₽`).join('\n');
-  if (transactions.length === 0) {
-    window.lastShare = 'Все всё уже оплатили';
-  }
+  window.lastShare = debts.join("\n");
 }
 
-// Функция для копирования в буфер обмена
-function copyToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(() => {
-      alert("✅ Скопировано в буфер обмена!");
-    }).catch(() => {
-      fallbackCopy(text);
-    });
-  } else {
-    fallbackCopy(text);
-  }
-  
-  function fallbackCopy(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    
-    try {
-      document.execCommand('copy');
-      alert("✅ Скопировано в буфер обмена!");
-    } catch (err) {
-      alert("❌ Не удалось скопировать. Выделите текст вручную.");
-    }
-    
-    document.body.removeChild(textarea);
-  }
-}
-
-// Функция для шаринга
 function share() {
-  if (!window.lastShare) {
-    calculate();
-    if (!window.lastShare) {
-      alert("❌ Сначала выполните расчет");
-      return;
-    }
-  }
-  
+  if (!window.lastShare || !window.lastShare.trim()) return alert("Сначала рассчитайте");
+
   if (navigator.share) {
-    navigator.share({
-      title: 'Делёжка счёта',
-      text: window.lastShare
-    }).catch((error) => {
-      if (error.name !== 'AbortError') {
-        copyToClipboard(window.lastShare);
-      }
-    });
+    navigator.share({ title: "Делёжка счёта", text: window.lastShare });
   } else {
-    copyToClipboard(window.lastShare);
+    navigator.clipboard.writeText(window.lastShare).then(() => alert("Скопировано"));
   }
 }
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-  load();
-  
-  window.addEventListener('beforeunload', () => {
-    if (people.length > 0 || transfers.length > 0) {
-      save();
-    }
-  });
-});
-
-// Регистрация Service Worker для PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    fetch('./sw.js', { method: 'HEAD' })
-      .then(response => {
-        if (response.ok) {
-          navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW зарегистрирован:', reg.scope))
-            .catch(err => console.warn('SW ошибка:', err));
-        } else {
-          console.log('SW не найден, пропускаем регистрацию');
-        }
-      })
-      .catch(() => {
-        console.log('SW не доступен, пропускаем регистрацию');
-      });
+    navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
   });
 }
+
+load();
 </script>
 </body>
 </html>

@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Делёжка счёта</title>
 
-  <!-- jsPDF и autotable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
-
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi0KDQuNCz0L7QstC+0LLRgdC60LDRjyDQuNC90LjRgdC60L7Qs9C+Iiwi c2hvcnRfbmFtZSI6IlNwbGl0Iiwic3RhcnRfdXJsIjoiLi9pbmRleC5odG1sIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YyZjJmNyIsInRoZW1lX2NvbG9yIjoiIzAwN2FmZiIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn0seyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,7 +48,6 @@
 <div class="container">
   <h1>Делёжка счёта</h1>
 
-  <!-- Блок цели — самый первый -->
   <div class="card">
     <h3>Целевая сумма сбора</h3>
     <div class="target-row">
@@ -77,7 +72,6 @@
     <div class="actions">
       <button class="btn" onclick="calculate()">Рассчитать</button>
       <button class="btn-gray" onclick="share()">Поделиться</button>
-      <button class="btn" onclick="exportToPDF()">Экспорт в PDF</button>
     </div>
   </div>
 
@@ -98,7 +92,6 @@
 </div>
 
 <script>
-const { jsPDF } = window.jspdf;
 let people = [];
 let transfers = [];
 let targetAmount = 0;
@@ -174,7 +167,61 @@ function renderTransfers() {
   save();
 }
 
-// Остальные функции addPerson, removePerson, update..., addTransfer и т.д. — как в предыдущей версии
+function addPerson() {
+  people.push({ name: "", paid: 0 });
+  render();
+}
+
+function removePerson(i) {
+  const removedName = people[i]?.name?.trim();
+  people.splice(i, 1);
+  if (removedName) {
+    transfers = transfers.filter(t => t.from !== removedName && t.to !== removedName);
+  }
+  render();
+}
+
+function updatePersonName(i, v) {
+  const trimmed = v.trim();
+  if (trimmed && people.some((p, idx) => idx !== i && p.name.trim() === trimmed)) {
+    alert("Имя уже используется");
+    return;
+  }
+  people[i].name = trimmed;
+  render();
+}
+
+function updatePersonPaid(i, v) {
+  people[i].paid = Math.max(0, parseFloat(v) || 0);
+  save();
+}
+
+function addTransfer() {
+  const names = getValidPeople();
+  if (names.length < 2) return alert("Нужно минимум 2 человека с именами");
+  transfers.push({ from: names[0], to: names[1], amount: 0 });
+  renderTransfers();
+}
+
+function removeTransfer(i) {
+  transfers.splice(i, 1);
+  renderTransfers();
+}
+
+function updateTransferFrom(i, v) {
+  transfers[i].from = v;
+  save();
+}
+
+function updateTransferTo(i, v) {
+  transfers[i].to = v;
+  save();
+}
+
+function updateTransferAmount(i, v) {
+  transfers[i].amount = Math.max(0, parseFloat(v) || 0);
+  save();
+}
 
 function saveTarget() {
   targetAmount = Math.max(0, parseFloat(document.getElementById("targetInput").value) || 0);
@@ -206,7 +253,6 @@ function calculate() {
     if (t.to in balancesCents) balancesCents[t.to] -= amt;
   });
 
-  // Если цель не задана — используем сумму взносов
   if (targetAmount <= 0) {
     targetAmount = totalPaidCents / 100;
     document.getElementById("targetInput").value = targetAmount.toFixed(2);
@@ -245,7 +291,6 @@ function calculate() {
   });
   html += '</tbody></table>';
 
-  // Кто кому должен (как раньше)
   let creditors = [], debtors = [];
   for (const name in balancesCents) {
     let diffRub = (balancesCents[name] - shareCents) / 100;
@@ -276,7 +321,34 @@ function calculate() {
   window.lastShare = debts.join("\n");
 }
 
-// exportToPDF, share, resetAll — как в предыдущей версии
+function share() {
+  if (!window.lastShare || !window.lastShare.trim()) return alert("Сначала рассчитайте");
+
+  if (navigator.share) {
+    navigator.share({ title: "Делёжка счёта", text: window.lastShare });
+  } else {
+    navigator.clipboard.writeText(window.lastShare).then(() => alert("Скопировано"));
+  }
+}
+
+function resetAll() {
+  if (!confirm("Сбросить всё?")) return;
+
+  people = [];
+  transfers = [];
+  targetAmount = 0;
+  document.getElementById("targetInput").value = "";
+  localStorage.clear();
+
+  document.getElementById("balances").innerHTML = "";
+  document.getElementById("result").innerHTML = "";
+
+  const msg = document.getElementById("resetMessage");
+  msg.style.display = "block";
+  setTimeout(() => msg.style.display = "none", 4000);
+
+  render(); // перерисовка интерфейса
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {

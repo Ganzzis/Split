@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- PWA: Manifest как data-URL (работает без отдельного файла) -->
+<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi0KDQuNCz0L7QstC+0LLRgdC60LDRjyDQuNC90LjRgdC60L7Qs9C+Iiwi c2hvcnRfbmFtZSI6IlNwbGl0Iiwic3RhcnRfdXJsIjoiLi9pbmRleC5odG1sIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YyZjJmNyIsInRoZW1lX2NvbG9yIjoiIzAwN2FmZiIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn0seyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5iI8J+UPC90ZXh0Pjwvc3ZnPiIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
+
+<!-- iOS-specific метки для standalone-режима и splash-экрана -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Делёжка">
+
+<!-- Регистрация Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(registration) {
+        console.log('Service Worker успешно зарегистрирован. Scope:', registration.scope);
+      })
+      .catch(function(error) {
+        console.error('Ошибка регистрации Service Worker:', error);
+      });
+  });
+}
+</script>
+<title>Split</title>
+
+<style>
+
+body{
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:#f2f2f7;
+margin:0;
+padding:20px;
+color:#1c1c1e;
+}
+
+.container{
+max-width:500px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+font-weight:600;
+margin-bottom:25px;
+}
+
+.card{
+background:white;
+border-radius:14px;
+padding:15px;
+margin-bottom:16px;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+.row{
+display:flex;
+gap:8px;
+margin-bottom:8px;
+}
+
+input,select{
+flex:1;
+padding:10px;
+border-radius:8px;
+border:1px solid #ddd;
+font-size:15px;
+}
+
+button{
+border:none;
+border-radius:10px;
+padding:10px 14px;
+font-size:15px;
+cursor:pointer;
+}
+
+.btn{
+background:#007aff;
+color:white;
+}
+
+.btn-gray{
+background:#8e8e93;
+color:white;
+}
+
+.btn-delete{
+background:#ff3b30;
+color:white;
+width:36px;
+}
+
+.result-line{
+padding:6px 0;
+border-bottom:1px solid #eee;
+}
+
+.balance-pos{color:#34c759;}
+.balance-neg{color:#ff3b30;}
+
+.actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Делёжка счёта</h1>
+
+<div class="card">
+
+<h3>Участники</h3>
+
+<div id="people"></div>
+
+<button class="btn" onclick="addPerson()">Добавить</button>
+
+</div>
+
+<div class="card">
+
+<h3>Переводы</h3>
+
+<div id="transfers"></div>
+
+<button class="btn" onclick="addTransfer()">Добавить</button>
+
+</div>
+
+<div class="card">
+
+<div class="actions">
+<button class="btn" onclick="calculate()">Рассчитать</button>
+<button class="btn-gray" onclick="share()">Поделиться</button>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Баланс</h3>
+
+<div id="balances"></div>
+
+</div>
+
+<div class="card">
+
+<h3>Кто кому должен</h3>
+
+<div id="result"></div>
+
+</div>
+
+</div>
+
+<script>
+
+let people=[]
+let transfers=[]
+
+function save(){
+localStorage.setItem("split_people",JSON.stringify(people))
+localStorage.setItem("split_transfers",JSON.stringify(transfers))
+}
+
+function load(){
+
+let p=localStorage.getItem("split_people")
+let t=localStorage.getItem("split_transfers")
+
+if(p) people=JSON.parse(p)
+if(t) transfers=JSON.parse(t)
+
+render()
+
+}
+
+function render(){
+
+let peopleDiv=document.getElementById("people")
+peopleDiv.innerHTML=""
+
+people.forEach((p,i)=>{
+
+peopleDiv.innerHTML+=`
+<div class="row">
+<input value="${p.name}" onchange="updatePersonName(${i},this.value)" placeholder="Имя">
+<input type="number" value="${p.paid}" onchange="updatePersonPaid(${i},this.value)">
+<button class="btn-delete" onclick="removePerson(${i})">×</button>
+</div>
+`
+
+})
+
+renderTransfers()
+
+}
+
+function renderTransfers(){
+
+let div=document.getElementById("transfers")
+div.innerHTML=""
+
+transfers.forEach((t,i)=>{
+
+let options=people.map(p=>`<option ${p.name==t.from?'selected':''}>${p.name}</option>`).join("")
+
+let options2=people.map(p=>`<option ${p.name==t.to?'selected':''}>${p.name}</option>`).join("")
+
+div.innerHTML+=`
+
+<div class="row">
+
+<select onchange="updateTransferFrom(${i},this.value)">
+${options}
+</select>
+
+<select onchange="updateTransferTo(${i},this.value)">
+${options2}
+</select>
+
+<input type="number" value="${t.amount}" onchange="updateTransferAmount(${i},this.value)">
+
+<button class="btn-delete" onclick="removeTransfer(${i})">×</button>
+
+</div>
+
+`
+
+})
+
+save()
+
+}
+
+function addPerson(){
+
+people.push({name:"",paid:0})
+render()
+
+}
+
+function removePerson(i){
+
+people.splice(i,1)
+render()
+
+}
+
+function updatePersonName(i,v){
+
+people[i].name=v
+render()
+
+}
+
+function updatePersonPaid(i,v){
+
+people[i].paid=parseFloat(v)||0
+save()
+
+}
+
+function addTransfer(){
+
+if(people.length<2) return alert("Добавьте минимум 2 человека")
+
+transfers.push({from:people[0].name,to:people[1].name,amount:0})
+
+renderTransfers()
+
+}
+
+function removeTransfer(i){
+
+transfers.splice(i,1)
+renderTransfers()
+
+}
+
+function updateTransferFrom(i,v){
+
+transfers[i].from=v
+save()
+
+}
+
+function updateTransferTo(i,v){
+
+transfers[i].to=v
+save()
+
+}
+
+function updateTransferAmount(i,v){
+
+transfers[i].amount=parseFloat(v)||0
+save()
+
+}
+
+function calculate(){
+
+let balances={}
+
+people.forEach(p=>{
+balances[p.name]=p.paid
+})
+
+transfers.forEach(t=>{
+
+if(balances[t.from]!=undefined)
+balances[t.from]+=t.amount
+
+if(balances[t.to]!=undefined)
+balances[t.to]-=t.amount
+
+})
+
+let total=0
+
+for(let k in balances) total+=balances[k]
+
+let share=total/people.length
+
+for(let k in balances) balances[k]-=share
+
+let creditors=[]
+let debtors=[]
+
+for(let k in balances){
+
+let v=Math.round(balances[k])
+
+if(v>0) creditors.push({name:k,amount:v})
+if(v<0) debtors.push({name:k,amount:-v})
+
+}
+
+creditors.sort((a,b)=>b.amount-a.amount)
+debtors.sort((a,b)=>b.amount-a.amount)
+
+let result=[]
+let balancesText=""
+
+for(let k in balances){
+
+let v=Math.round(balances[k])
+
+if(v>0) balancesText+=`<div class="balance-pos">${k} +${v} ₽</div>`
+else if(v<0) balancesText+=`<div class="balance-neg">${k} ${v} ₽</div>`
+else balancesText+=`<div>${k} 0 ₽</div>`
+
+}
+
+while(debtors.length && creditors.length){
+
+let d=debtors[0]
+let c=creditors[0]
+
+let pay=Math.min(d.amount,c.amount)
+
+result.push(`${d.name} → ${c.name} : ${pay} ₽`)
+
+d.amount-=pay
+c.amount-=pay
+
+if(!d.amount) debtors.shift()
+if(!c.amount) creditors.shift()
+
+}
+
+document.getElementById("balances").innerHTML=balancesText
+
+document.getElementById("result").innerHTML=result.map(r=>`<div class="result-line">${r}</div>`).join("")
+
+window.lastShare=result.join("\n")
+
+}
+
+function share(){
+
+if(!window.lastShare) return alert("Сначала рассчитайте")
+
+if(navigator.share){
+
+navigator.share({
+title:"Делёжка счёта",
+text:window.lastShare
+})
+
+}else{
+
+navigator.clipboard.writeText(window.lastShare)
+alert("Скопировано")
+
+}
+
+}
+
+load()
+
+</script>
+
+</body>
+</html>

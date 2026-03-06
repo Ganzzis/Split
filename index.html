@@ -92,6 +92,16 @@
       box-sizing: border-box;
     }
 
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
     .arrow {
       font-size: 18px;
       color: #8e8e93;
@@ -104,6 +114,11 @@
       padding: 10px 14px;
       font-size: 15px;
       cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    button:active {
+      opacity: 0.7;
     }
 
     .btn { background: #007aff; color: white; }
@@ -153,10 +168,24 @@
       justify-content: center;
     }
 
-    .result-line { padding: 6px 0; border-bottom: 1px solid #eee; }
+    .result-line { 
+      padding: 6px 0; 
+      border-bottom: 1px solid #eee; 
+    }
+    
+    .result-line:last-child {
+      border-bottom: none;
+    }
 
     @supports (padding-top: env(safe-area-inset-top)) {
       body { padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px; }
+    }
+    
+    .warning {
+      color: #ff3b30;
+      font-size: 14px;
+      margin-top: 8px;
+      text-align: center;
     }
   </style>
 </head>
@@ -170,19 +199,19 @@
   <div class="card">
     <h3>Участники</h3>
     <div id="people"></div>
-    <button class="btn" onclick="addPerson()">Добавить</button>
+    <button class="btn" onclick="addPerson()">➕ Добавить участника</button>
   </div>
 
   <div class="card">
     <h3>Переводы</h3>
     <div id="transfers"></div>
-    <button class="btn" onclick="addTransfer()">Добавить</button>
+    <button class="btn" onclick="addTransfer()">💸 Добавить перевод</button>
   </div>
 
   <div class="card">
     <div class="actions">
-      <button class="btn" onclick="calculate()">Рассчитать</button>
-      <button class="btn-gray" onclick="share()">Поделиться</button>
+      <button class="btn" onclick="calculate()">🧮 Рассчитать</button>
+      <button class="btn-gray" onclick="share()">📤 Поделиться</button>
     </div>
   </div>
 
@@ -199,153 +228,483 @@
 </div>
 
 <script>
+// Состояние приложения
 let people = [];
 let transfers = [];
 
-function save() { /* ... тот же код сохранения ... */ 
-  localStorage.setItem("split_people", JSON.stringify(people));
-  localStorage.setItem("split_transfers", JSON.stringify(transfers));
+// Сохранение в localStorage
+function save() {
+  try {
+    localStorage.setItem("split_people", JSON.stringify(people));
+    localStorage.setItem("split_transfers", JSON.stringify(transfers));
+  } catch (e) {
+    console.warn('Не удалось сохранить данные:', e);
+  }
 }
 
-function load() { /* ... тот же ... */ 
-  let p = localStorage.getItem("split_people");
-  let t = localStorage.getItem("split_transfers");
-  if (p) people = JSON.parse(p);
-  if (t) transfers = JSON.parse(t);
+// Загрузка из localStorage
+function load() {
+  try {
+    let p = localStorage.getItem("split_people");
+    let t = localStorage.getItem("split_transfers");
+    if (p) people = JSON.parse(p) || [];
+    if (t) transfers = JSON.parse(t) || [];
+  } catch (e) {
+    console.warn('Не удалось загрузить данные:', e);
+    people = [];
+    transfers = [];
+  }
   render();
 }
 
+// Функции для работы с участниками
+function addPerson() {
+  people.push({ name: `Участник ${people.length + 1}`, paid: 0 });
+  render();
+}
+
+function removePerson(index) {
+  if (index < 0 || index >= people.length) return;
+  
+  const nameToRemove = people[index].name;
+  people.splice(index, 1);
+  
+  // Удаляем переводы, связанные с этим участником
+  transfers = transfers.filter(t => 
+    t.from !== nameToRemove && t.to !== nameToRemove
+  );
+  
+  render();
+}
+
+function updatePersonName(index, value) {
+  if (index < 0 || index >= people.length) return;
+  
+  const oldName = people[index].name;
+  const newName = value.trim() || `Участник ${index + 1}`;
+  
+  // Проверка на дубликат имени
+  if (people.some((p, i) => i !== index && p.name === newName)) {
+    alert('Участник с таким именем уже существует');
+    render(); // Перерендерим, чтобы сбросить значение
+    return;
+  }
+  
+  people[index].name = newName;
+  
+  // Обновляем имена в переводах
+  transfers = transfers.map(t => ({
+    from: t.from === oldName ? newName : t.from,
+    to: t.to === oldName ? newName : t.to,
+    amount: t.amount
+  }));
+  
+  render();
+}
+
+function updatePersonPaid(index, value) {
+  if (index < 0 || index >= people.length) return;
+  
+  const numValue = parseFloat(value);
+  people[index].paid = isNaN(numValue) ? 0 : Math.max(0, numValue);
+  render();
+}
+
+// Функции для работы с переводами
+function addTransfer() {
+  if (people.length < 2) {
+    alert("❌ Нужно минимум 2 участника для создания перевода");
+    return;
+  }
+  
+  // Находим двух разных участников
+  let from = people[0]?.name || "";
+  let to = people[1]?.name || "";
+  
+  transfers.push({ 
+    from: from, 
+    to: to, 
+    amount: 0 
+  });
+  
+  render();
+}
+
+function removeTransfer(index) {
+  if (index < 0 || index >= transfers.length) return;
+  transfers.splice(index, 1);
+  render();
+}
+
+function updateTransferFrom(index, value) {
+  if (index < 0 || index >= transfers.length) return;
+  
+  if (value === transfers[index].to) {
+    alert("⚠️ Нельзя переводить самому себе");
+    render(); // Перерендерим, чтобы сбросить выбор
+    return;
+  }
+  
+  transfers[index].from = value;
+  render();
+}
+
+function updateTransferTo(index, value) {
+  if (index < 0 || index >= transfers.length) return;
+  
+  if (value === transfers[index].from) {
+    alert("⚠️ Нельзя переводить самому себе");
+    render(); // Перерендерим, чтобы сбросить выбор
+    return;
+  }
+  
+  transfers[index].to = value;
+  render();
+}
+
+function updateTransferAmount(index, value) {
+  if (index < 0 || index >= transfers.length) return;
+  
+  const numValue = parseFloat(value);
+  transfers[index].amount = isNaN(numValue) ? 0 : Math.max(0, numValue);
+  render();
+}
+
+// Функция рендеринга
 function render() {
+  renderPeople();
+  renderTransfers();
+  save();
+}
+
+function renderPeople() {
   let peopleDiv = document.getElementById("people");
+  if (!peopleDiv) return;
+  
   peopleDiv.innerHTML = "";
 
+  if (people.length === 0) {
+    peopleDiv.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">👥 Добавьте участников</div>';
+    return;
+  }
+
   people.forEach((p, i) => {
+    const name = p.name || `Участник ${i + 1}`;
+    const paid = p.paid || 0;
+    
     peopleDiv.innerHTML += `
       <div class="person-item" data-num="${i+1}">
         <div class="row">
-          <input value="${p.name}" onchange="updatePersonName(${i}, this.value)" placeholder="Имя">
-          <input type="number" value="${p.paid}" onchange="updatePersonPaid(${i}, this.value)">
-          <button class="btn-delete" onclick="removePerson(${i})">×</button>
+          <input type="text" value="${escapeHtml(name)}" 
+                 onchange="updatePersonName(${i}, this.value)" 
+                 placeholder="Имя">
+          <input type="number" value="${paid}" 
+                 onchange="updatePersonPaid(${i}, this.value)" 
+                 placeholder="Сумма" min="0" step="0.01">
+          <button class="btn-delete" onclick="removePerson(${i})" title="Удалить">×</button>
         </div>
       </div>
     `;
   });
-
-  renderTransfers();
 }
 
 function renderTransfers() {
   let div = document.getElementById("transfers");
+  if (!div) return;
+  
   div.innerHTML = "";
 
+  if (transfers.length === 0) {
+    div.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">💱 Добавьте переводы между участниками</div>';
+    return;
+  }
+
+  // Создаем список уникальных имен участников для селектов
+  const personNames = people.map(p => p.name || "—").filter(name => name && name !== "—");
+  
   transfers.forEach((t, i) => {
-    let options = people.map(p => `<option ${p.name === t.from ? 'selected' : ''}>${p.name}</option>`).join("");
-    let options2 = people.map(p => `<option ${p.name === t.to ? 'selected' : ''}>${p.name}</option>`).join("");
+    const from = t.from || "";
+    const to = t.to || "";
+    const amount = t.amount || 0;
+    
+    // Генерируем options для селектов
+    let optionsFrom = '';
+    let optionsTo = '';
+    
+    personNames.forEach(name => {
+      optionsFrom += `<option value="${escapeHtml(name)}" ${name === from ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+      optionsTo += `<option value="${escapeHtml(name)}" ${name === to ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+    });
 
     div.innerHTML += `
       <div class="transfer-item">
         <div class="row">
-          <select onchange="updateTransferFrom(${i}, this.value)">
-            ${options}
+          <select onchange="updateTransferFrom(${i}, this.value)" ${personNames.length === 0 ? 'disabled' : ''}>
+            <option value="">— выберите —</option>
+            ${optionsFrom}
           </select>
           <span class="arrow">→</span>
-          <select onchange="updateTransferTo(${i}, this.value)">
-            ${options2}
+          <select onchange="updateTransferTo(${i}, this.value)" ${personNames.length === 0 ? 'disabled' : ''}>
+            <option value="">— выберите —</option>
+            ${optionsTo}
           </select>
-          <input type="number" value="${t.amount}" onchange="updateTransferAmount(${i}, this.value)">
-          <button class="btn-delete" onclick="removeTransfer(${i})">×</button>
+          <input type="number" value="${amount}" 
+                 onchange="updateTransferAmount(${i}, this.value)" 
+                 placeholder="Сумма" min="0" step="0.01">
+          <button class="btn-delete" onclick="removeTransfer(${i})" title="Удалить">×</button>
         </div>
       </div>
     `;
   });
-
-  save();
 }
 
-// addPerson, removePerson, update... — оставляем как было
+// Функция для экранирования HTML
+function escapeHtml(unsafe) {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
+// Основная функция расчета
 function calculate() {
+  if (people.length === 0) {
+    document.getElementById("balances").innerHTML = '<div style="text-align: center; color: #8e8e93;">👥 Добавьте участников</div>';
+    document.getElementById("result").innerHTML = '';
+    return;
+  }
+
+  // Инициализация балансов
   let balances = {};
   let actualPaid = {};
 
   people.forEach(p => {
-    balances[p.name] = p.paid;
-    actualPaid[p.name] = p.paid;
+    const name = p.name || `Участник ${people.indexOf(p) + 1}`;
+    balances[name] = p.paid || 0;
+    actualPaid[name] = p.paid || 0;
   });
 
+  // Учитываем переводы
   transfers.forEach(t => {
-    if (actualPaid[t.from] !== undefined) actualPaid[t.from] += t.amount;
-    if (actualPaid[t.to] !== undefined) actualPaid[t.to] -= t.amount;
-    if (balances[t.from] !== undefined) balances[t.from] += t.amount;
-    if (balances[t.to] !== undefined) balances[t.to] -= t.amount;
+    if (t.from && t.to && t.amount > 0 && t.from !== t.to) {
+      if (balances[t.from] !== undefined && balances[t.to] !== undefined) {
+        // Уменьшаем баланс отправителя, увеличиваем баланс получателя
+        balances[t.from] -= t.amount;
+        balances[t.to] += t.amount;
+        
+        // Для отображения фактических трат
+        actualPaid[t.from] = (actualPaid[t.from] || 0) + t.amount;
+        actualPaid[t.to] = (actualPaid[t.to] || 0) - t.amount;
+      }
+    }
   });
 
+  // Общая сумма и доля
   let total = Object.values(balances).reduce((a, b) => a + b, 0);
-  let share = people.length > 0 ? total / people.length : 0;
-
-  for (let k in balances) balances[k] -= share;
+  let share = total / people.length;
 
   // Таблица баланса
   let html = '<table class="balance-table"><thead><tr><th>Имя</th><th>Доля</th><th>Внёс</th><th>Разница</th></tr></thead><tbody>';
 
   people.forEach(p => {
-    let name = p.name || "—";
-    let should = Math.round(share);
-    let actual = Math.round(actualPaid[name] || 0);
-    let diff = actual - should;
-    let diffClass = diff > 0 ? "balance-pos" : (diff < 0 ? "balance-neg" : "");
-    let diffSign = diff > 0 ? "+" : (diff < 0 ? "" : "");
+    const name = p.name || `Участник ${people.indexOf(p) + 1}`;
+    const should = share;
+    const actual = actualPaid[name] || 0;
+    const diff = actual - should;
+    
+    // Форматирование с двумя знаками после запятой
+    const shouldFormatted = should.toFixed(2);
+    const actualFormatted = actual.toFixed(2);
+    const diffFormatted = Math.abs(diff).toFixed(2);
+    
+    let diffClass = "";
+    let diffSign = "";
+    
+    if (diff > 0.01) {
+      diffClass = "balance-pos";
+      diffSign = "+";
+    } else if (diff < -0.01) {
+      diffClass = "balance-neg";
+      diffSign = "-";
+    }
 
     html += `
       <tr>
-        <td>${name}</td>
-        <td>${should} ₽</td>
-        <td>${actual} ₽</td>
-        <td class="${diffClass}">${diffSign}${diff} ₽</td>
+        <td>${escapeHtml(name)}</td>
+        <td>${shouldFormatted} ₽</td>
+        <td>${actualFormatted} ₽</td>
+        <td class="${diffClass}">${diffSign}${diffFormatted} ₽</td>
       </tr>
     `;
   });
 
   html += '</tbody></table>';
+  
+  // Добавляем итог
+  html += `<div style="text-align: right; margin-top: 10px; font-weight: 600;">Итого: ${total.toFixed(2)} ₽</div>`;
 
-  // Кто кому должен (как раньше)
-  let creditors = [], debtors = [];
+  // Расчет долгов (кто кому должен)
+  const netBalances = {};
   for (let k in balances) {
-    let v = Math.round(balances[k]);
-    if (v > 0) creditors.push({name: k, amount: v});
-    if (v < 0) debtors.push({name: k, amount: -v});
+    netBalances[k] = balances[k] - share;
   }
-  creditors.sort((a,b)=>b.amount-a.amount);
-  debtors.sort((a,b)=>b.amount-a.amount);
+
+  let creditors = []; // те, кому должны (положительный баланс)
+  let debtors = [];   // те, кто должен (отрицательный баланс)
+  
+  for (let k in netBalances) {
+    const v = netBalances[k];
+    // Используем небольшой допуск для избежания проблем с плавающей точкой
+    if (v > 0.01) creditors.push({name: k, amount: v});
+    if (v < -0.01) debtors.push({name: k, amount: -v});
+  }
+
+  // Сортировка по убыванию суммы
+  creditors.sort((a, b) => b.amount - a.amount);
+  debtors.sort((a, b) => b.amount - a.amount);
 
   let result = [];
-  while (debtors.length && creditors.length) {
-    let d = debtors[0], c = creditors[0];
-    let pay = Math.min(d.amount, c.amount);
-    result.push(`${d.name} → ${c.name} : ${pay} ₽`);
-    d.amount -= pay; c.amount -= pay;
-    if (!d.amount) debtors.shift();
-    if (!c.amount) creditors.shift();
+  let transactions = [];
+
+  // Жадный алгоритм распределения долгов
+  while (debtors.length > 0 && creditors.length > 0) {
+    let debtor = debtors[0];
+    let creditor = creditors[0];
+    
+    let amount = Math.min(debtor.amount, creditor.amount);
+    
+    // Округляем до копеек
+    amount = Math.round(amount * 100) / 100;
+    
+    if (amount > 0) {
+      transactions.push({
+        from: debtor.name,
+        to: creditor.name,
+        amount: amount
+      });
+      
+      debtor.amount = Math.round((debtor.amount - amount) * 100) / 100;
+      creditor.amount = Math.round((creditor.amount - amount) * 100) / 100;
+    }
+    
+    // Удаляем тех, кто полностью рассчитался
+    if (debtor.amount < 0.01) debtors.shift();
+    if (creditor.amount < 0.01) creditors.shift();
+  }
+
+  // Форматируем результат
+  if (transactions.length > 0) {
+    result = transactions.map(t => 
+      `${escapeHtml(t.from)} → ${escapeHtml(t.to)} : ${t.amount.toFixed(2)} ₽`
+    );
+  } else {
+    result = ['✅ Все всё уже оплатили'];
   }
 
   document.getElementById("balances").innerHTML = html;
   document.getElementById("result").innerHTML = result.map(r => `<div class="result-line">${r}</div>`).join("");
 
-  window.lastShare = result.join("\n");
+  // Сохраняем результат для функции share
+  window.lastShare = transactions.map(t => `${t.from} → ${t.to} : ${t.amount.toFixed(2)} ₽`).join('\n');
+  if (transactions.length === 0) {
+    window.lastShare = 'Все всё уже оплатили';
+  }
 }
 
-function share() { /* ... как было ... */ }
+// Функция для копирования в буфер обмена
+function copyToClipboard(text) {
+  // Используем современный API если доступен
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("✅ Скопировано в буфер обмена!");
+    }).catch(() => {
+      // Fallback
+      fallbackCopy();
+    });
+  } else {
+    fallbackCopy();
+  }
+  
+  function fallbackCopy() {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+      document.execCommand('copy');
+      alert("✅ Скопировано в буфер обмена!");
+    } catch (err) {
+      alert("❌ Не удалось скопировать. Выделите текст вручную.");
+    }
+    
+    document.body.removeChild(textarea);
+  }
+}
 
-// Service Worker регистрация (как раньше)
+// Функция для шаринга
+function share() {
+  if (!window.lastShare) {
+    calculate();
+    if (!window.lastShare) {
+      alert("❌ Сначала выполните расчет");
+      return;
+    }
+  }
+  
+  // Пробуем использовать Web Share API
+  if (navigator.share) {
+    navigator.share({
+      title: 'Делёжка счёта',
+      text: window.lastShare
+    }).catch((error) => {
+      if (error.name !== 'AbortError') {
+        // Если отмена - не показываем ошибку
+        copyToClipboard(window.lastShare);
+      }
+    });
+  } else {
+    // Если Web Share API недоступен, копируем в буфер
+    copyToClipboard(window.lastShare);
+  }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+  load();
+  
+  // Добавляем обработчик для защиты от случайной потери данных
+  window.addEventListener('beforeunload', (e) => {
+    if (people.length > 0 || transfers.length > 0) {
+      save();
+    }
+  });
+});
+
+// Регистрация Service Worker для PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW ok', reg.scope))
-      .catch(err => console.error('SW error', err));
+    // Проверяем, существует ли sw.js, если нет - не регистрируем
+    fetch('./sw.js', { method: 'HEAD' })
+      .then(response => {
+        if (response.ok) {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW зарегистрирован:', reg.scope))
+            .catch(err => console.warn('SW ошибка:', err));
+        } else {
+          console.log('SW не найден, пропускаем регистрацию');
+        }
+      })
+      .catch(() => {
+        console.log('SW не доступен, пропускаем регистрацию');
+      });
   });
 }
-
-load();
 </script>
 </body>
 </html>

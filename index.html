@@ -320,22 +320,15 @@ function calculate() {
     if (creditors[ci].amount < 0.01) ci++;
   }
 
-  // Недобор только на оставшихся должниках (после внутренних переводов)
-  const totalShortfall = Math.max(0, targetAmount - (totalPaidCents / 100));
-  if (totalShortfall > 0.01) {
-    let remainingDebtors = debtors.filter(d => d.amount > 0.01);
-    if (remainingDebtors.length > 0) {
-      const shortfallPerRemaining = totalShortfall / remainingDebtors.length;
-      remainingDebtors.forEach(d => {
-        const toPay = Math.min(d.amount, shortfallPerRemaining);
-        if (toPay > 0.01) {
-          debts.push(`${d.name} должен докинуть в кассу: ${toPay.toFixed(2)} ₽`);
-        }
-      });
-      debts.push(`<strong>Общая касса недобрана на ${totalShortfall.toFixed(2)} ₽</strong>`);
-    } else {
-      debts.push(`<strong>Общая касса недобрана на ${totalShortfall.toFixed(2)} ₽ (все переплатили)</strong>`);
-    }
+  // Недобор = сумма оставшихся долгов должников после внутренних переводов
+  const remainingShortfall = debtors.reduce((sum, d) => sum + d.amount, 0);
+  if (remainingShortfall > 0.01) {
+    debtors.forEach(d => {
+      if (d.amount > 0.01) {
+        debts.push(`${d.name} должен докинуть в кассу: ${d.amount.toFixed(2)} ₽`);
+      }
+    });
+    debts.push(`<strong>Общая касса недобрана на ${remainingShortfall.toFixed(2)} ₽</strong>`);
   } else if (totalShortfall < -0.01) {
     debts.push(`<strong>Излишек в общей кассе: ${Math.abs(totalShortfall).toFixed(2)} ₽</strong>`);
   }
@@ -346,16 +339,6 @@ function calculate() {
     : "<p>Всё собрано поровну</p>";
 
   window.lastShare = debts.join("\n");
-}
-
-function share() {
-  if (!window.lastShare || !window.lastShare.trim()) return alert("Сначала рассчитайте");
-
-  if (navigator.share) {
-    navigator.share({ title: "Разделить счёт", text: window.lastShare });
-  } else {
-    navigator.clipboard.writeText(window.lastShare).then(() => alert("Скопировано"));
-  }
 }
 
 function resetAll() {

@@ -2,11 +2,9 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Split счёт</title>
-
-<link rel="manifest" href="manifest.json">
+<title>Разделить счёт</title>
 
 <style>
 
@@ -20,6 +18,7 @@
 }
 
 @media (prefers-color-scheme:dark){
+
 :root{
 --bg:#000;
 --card:#1c1c1e;
@@ -27,6 +26,7 @@
 --secondary:#9a9a9f;
 --border:#3a3a3c;
 }
+
 }
 
 body{
@@ -43,6 +43,7 @@ padding:16px;
 }
 
 h1{
+font-size:24px;
 text-align:center;
 margin-bottom:20px;
 }
@@ -114,6 +115,7 @@ color:var(--secondary);
 
 .summary-value{
 font-weight:600;
+font-size:16px;
 }
 
 .progress-bar{
@@ -121,6 +123,7 @@ height:10px;
 background:var(--border);
 border-radius:10px;
 overflow:hidden;
+margin-top:8px;
 }
 
 .progress-fill{
@@ -134,16 +137,22 @@ border-top:1px solid var(--border);
 padding:10px 0;
 }
 
-.balance-pos{color:#34c759;}
-.balance-neg{color:#ff3b30;}
-
-.debt{
-border-bottom:1px solid var(--border);
-padding:8px 0;
+.person:first-child{
+border:none;
 }
 
-.share-btn{
-background:#34c759;
+.balance-pos{
+color:#34c759;
+}
+
+.balance-neg{
+color:#ff3b30;
+}
+
+.debt{
+padding:8px 0;
+border-bottom:1px solid var(--border);
+font-size:15px;
 }
 
 </style>
@@ -156,8 +165,10 @@ background:#34c759;
 <h1>Разделить счёт</h1>
 
 <div class="card">
+
 <label>Целевая сумма</label>
-<input id="target" type="number">
+<input id="target" type="number" value="0">
+
 </div>
 
 <div class="card">
@@ -180,7 +191,7 @@ background:#34c759;
 
 </div>
 
-<button class="share-btn" onclick="share()">Поделиться расчётом</button>
+<button onclick="calculate()">Рассчитать</button>
 
 <div id="result"></div>
 
@@ -191,49 +202,19 @@ background:#34c759;
 let people=[]
 let transfers=[]
 
-load()
-
-function save(){
-
-localStorage.setItem("splitData",
-JSON.stringify({people,transfers,target:target.value}))
-
-}
-
-function load(){
-
-let data=localStorage.getItem("splitData")
-
-if(data){
-
-let d=JSON.parse(data)
-
-people=d.people||[]
-transfers=d.transfers||[]
-
-setTimeout(()=>{
-document.getElementById("target").value=d.target||0
-render()
-calculate()
-},10)
-
-}
-
-}
-
 function addPerson(){
 
 people.push({name:"",paid:0})
+
 render()
-save()
 
 }
 
 function addTransfer(){
 
 transfers.push({from:0,to:0,amount:0})
+
 render()
-save()
 
 }
 
@@ -249,15 +230,15 @@ phtml+=`
 
 <input placeholder="имя"
 value="${p.name}"
-oninput="people[${i}].name=this.value;save();calculate()">
+oninput="people[${i}].name=this.value">
 
 <input type="number"
 placeholder="внес"
 value="${p.paid}"
-oninput="people[${i}].paid=parseFloat(this.value)||0;save();calculate()">
+oninput="people[${i}].paid=parseFloat(this.value)||0">
 
 <button class="remove"
-onclick="people.splice(${i},1);render();save();calculate()">×</button>
+onclick="people.splice(${i},1);render()">×</button>
 
 </div>
 
@@ -265,7 +246,7 @@ onclick="people.splice(${i},1);render();save();calculate()">×</button>
 
 })
 
-peopleDiv.innerHTML=phtml
+document.getElementById("people").innerHTML=phtml
 
 
 let thtml=""
@@ -276,7 +257,7 @@ thtml+=`
 
 <div class="row">
 
-<select onchange="transfers[${i}].from=this.value;save();calculate()">
+<select onchange="transfers[${i}].from=this.value">
 
 ${people.map((p,j)=>
 `<option value="${j}" ${j==t.from?"selected":""}>${p.name||"?"}</option>`
@@ -284,7 +265,7 @@ ${people.map((p,j)=>
 
 </select>
 
-<select onchange="transfers[${i}].to=this.value;save();calculate()">
+<select onchange="transfers[${i}].to=this.value">
 
 ${people.map((p,j)=>
 `<option value="${j}" ${j==t.to?"selected":""}>${p.name||"?"}</option>`
@@ -294,10 +275,10 @@ ${people.map((p,j)=>
 
 <input type="number"
 value="${t.amount}"
-oninput="transfers[${i}].amount=parseFloat(this.value)||0;save();calculate()">
+oninput="transfers[${i}].amount=parseFloat(this.value)||0">
 
 <button class="remove"
-onclick="transfers.splice(${i},1);render();save();calculate()">×</button>
+onclick="transfers.splice(${i},1);render()">×</button>
 
 </div>
 
@@ -305,7 +286,7 @@ onclick="transfers.splice(${i},1);render();save();calculate()">×</button>
 
 })
 
-transfersDiv.innerHTML=thtml
+document.getElementById("transfers").innerHTML=thtml
 
 }
 
@@ -324,13 +305,15 @@ paid[t.to]+=t.amount
 
 let totalPaid=paid.reduce((a,b)=>a+b,0)
 
-let share=target/people.length||0
+let share=target/people.length
 
 let balance=paid.map(p=>p-share)
 
+let resultHTML=""
+
 let percent=target?Math.min(100,totalPaid/target*100):0
 
-let html=`
+resultHTML+=`
 
 <div class="card">
 
@@ -363,9 +346,9 @@ let html=`
 
 people.forEach((p,i)=>{
 
-let b=balance[i]
+let bal=balance[i]
 
-html+=`
+resultHTML+=`
 
 <div class="person">
 
@@ -375,9 +358,9 @@ html+=`
 
 доля: ${share.toFixed(2)} ₽<br>
 
-<span class="${b>=0?"balance-pos":"balance-neg"}">
+<span class="${bal>=0?"balance-pos":"balance-neg"}">
 
-${b>=0?"💰 получит":"💸 должен"} ${Math.abs(b).toFixed(2)} ₽
+${bal>=0?"💰 получит":"💸 должен"} ${Math.abs(bal).toFixed(2)} ₽
 
 </span>
 
@@ -387,40 +370,78 @@ ${b>=0?"💰 получит":"💸 должен"} ${Math.abs(b).toFixed(2)} ₽
 
 })
 
-html+="</div>"
+resultHTML+="</div>"
 
-result.innerHTML=html
+let creditors=[]
+let debtors=[]
 
-}
+balance.forEach((b,i)=>{
 
-async function share(){
-
-let text="Разделение счёта:\n"
-
-people.forEach(p=>{
-
-text+=`${p.name} внёс ${p.paid} ₽\n`
+if(b>0)creditors.push({i,amount:b})
+if(b<0)debtors.push({i,amount:-b})
 
 })
 
-if(navigator.share){
+let debtsHTML=`<div class="card"><h3>Кто кому должен</h3>`
 
-navigator.share({
-title:"Разделение счёта",
-text:text
+while(debtors.length && creditors.length){
+
+let d=debtors[0]
+let c=creditors[0]
+
+let pay=Math.min(d.amount,c.amount)
+
+debtsHTML+=`
+
+<div class="debt">
+
+${people[d.i].name} должен перевести
+${people[c.i].name}
+${pay.toFixed(2)} ₽
+
+</div>
+
+`
+
+d.amount-=pay
+c.amount-=pay
+
+if(d.amount<0.01)debtors.shift()
+if(c.amount<0.01)creditors.shift()
+
+}
+
+let shortage=target-totalPaid
+
+if(shortage>0){
+
+balance.forEach((b,i)=>{
+
+if(b<0){
+
+debtsHTML+=`
+
+<div class="debt">
+
+${people[i].name} должен
+доложить в кассу
+${Math.min(-b,shortage).toFixed(2)} ₽
+
+</div>
+
+`
+
+}
+
 })
 
-}else{
-
-navigator.clipboard.writeText(text)
-alert("Скопировано")
-
 }
 
-}
+debtsHTML+="</div>"
 
-render()
-calculate()
+document.getElementById("result").innerHTML=resultHTML+debtsHTML
+
+}
 
 </script>
 

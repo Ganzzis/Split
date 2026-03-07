@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Разделить счёт</title>
 
 <style>
-
 :root{
 --bg:#f2f2f7;
 --card:#ffffff;
@@ -18,9 +16,7 @@
 --green:#34c759;
 --red:#ff3b30;
 }
-
 @media (prefers-color-scheme: dark){
-
 :root{
 --bg:#000;
 --card:#1c1c1e;
@@ -28,437 +24,230 @@
 --sub:#8e8e93;
 --border:#2c2c2e;
 }
-
 }
-
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+font-family:-apple-system,"SF Pro Text",BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 background:var(--bg);
 margin:0;
 padding:16px;
 color:var(--text);
 }
-
-.container{
-max-width:520px;
-margin:auto;
-}
-
-h1{
-text-align:center;
-margin-bottom:20px;
-}
-
-.card{
-background:var(--card);
-border-radius:16px;
-padding:16px;
-margin-bottom:16px;
-border:1px solid var(--border);
-}
-
-.row{
-display:flex;
-gap:8px;
-margin-bottom:10px;
-flex-wrap:wrap;
-}
-
-input,select{
-flex:1;
-padding:10px;
-border-radius:10px;
-border:1px solid var(--border);
-font-size:16px;
-background:transparent;
-color:var(--text);
-}
-
-button{
-border:none;
-border-radius:10px;
-padding:10px 14px;
-cursor:pointer;
-}
-
-.btn{
-background:var(--blue);
-color:white;
-}
-
-.delete{
-background:var(--red);
-color:white;
-width:36px;
-}
-
-.summary{
-display:flex;
-gap:10px;
-margin-bottom:12px;
-}
-
-.summary-card{
-flex:1;
-text-align:center;
-background:var(--bg);
-padding:10px;
-border-radius:10px;
-}
-
-.progress{
-height:10px;
-background:var(--border);
-border-radius:10px;
-overflow:hidden;
-margin-top:8px;
-}
-
-.bar{
-height:100%;
-background:var(--blue);
-}
-
-.person{
-background:var(--bg);
-padding:12px;
-border-radius:12px;
-margin-top:10px;
-}
-
-.pos{color:var(--green);font-weight:600;}
-.neg{color:var(--red);font-weight:600;}
-
-.result-line{
-padding:6px 0;
-border-bottom:1px solid var(--border);
-}
-
+.container{max-width:520px;margin:auto;}
+h1{text-align:center;margin-bottom:20px;}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid var(--border);}
+.row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+input,select{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);font-size:16px;background:transparent;color:var(--text);}
+button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;transition: transform 0.1s ease;font-family:inherit;}
+button:active{transform: scale(0.95);}
+.btn{background:var(--blue);color:white;}
+.delete{background:var(--red);color:white;width:36px;}
+.summary{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.summary-card{flex:1;text-align:center;background:var(--bg);padding:10px;border-radius:10px;font-size:16px;}
+.progress{height:24px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:8px;position:relative;}
+.bar{height:100%;background:var(--blue);transition: width 0.5s ease;text-align:right;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:white;font-weight:600;font-size:14px;}
+.person{background:var(--bg);padding:12px;border-radius:12px;margin-top:10px;opacity:0;transform:translateY(10px);transition: all 0.4s ease;font-size:16px;}
+.person.show{opacity:1;transform:translateY(0);}
+.status{font-weight:600;margin-top:4px;}
+.pos{color:var(--green);}
+.neg{color:var(--red);}
+.result-line{padding:6px 0;border-bottom:1px solid var(--border);}
 </style>
 </head>
-
 <body>
-
 <div class="container">
-
 <h1>Разделить счёт</h1>
 
 <div class="card">
 <h3>Целевая сумма</h3>
-
 <div class="row">
 <input id="target" type="number">
 <button class="btn" onclick="save()">Сохранить</button>
 </div>
 </div>
 
-
 <div class="card">
 <h3>Участники</h3>
-
 <div id="people"></div>
-
 <button class="btn" onclick="addPerson()">Добавить</button>
 </div>
 
-
 <div class="card">
 <h3>Переводы</h3>
-
 <div id="transfers"></div>
-
 <button class="btn" onclick="addTransfer()">Добавить</button>
 </div>
-
 
 <div class="card">
 <button class="btn" onclick="calculate()">Рассчитать</button>
 </div>
-
 
 <div class="card">
 <h3>Баланс</h3>
 <div id="balances"></div>
 </div>
 
-
 <div class="card">
 <h3>Кто кому должен</h3>
 <div id="result"></div>
 </div>
-
 </div>
-
 
 <script>
+let people = [];
+let transfers = [];
 
-let people=[]
-let transfers=[]
-
-
-function save(){
-
-localStorage.people=JSON.stringify(people)
-localStorage.transfers=JSON.stringify(transfers)
-localStorage.target=target.value
-
-render()
-
+function save() {
+  localStorage.people = JSON.stringify(people);
+  localStorage.transfers = JSON.stringify(transfers);
+  localStorage.target = target.value;
+  render();
 }
 
-
-function load(){
-
-if(localStorage.people)people=JSON.parse(localStorage.people)
-if(localStorage.transfers)transfers=JSON.parse(localStorage.transfers)
-if(localStorage.target)target.value=localStorage.target
-
-render()
-
+function load() {
+  if(localStorage.people) people = JSON.parse(localStorage.people);
+  if(localStorage.transfers) transfers = JSON.parse(localStorage.transfers);
+  if(localStorage.target) target.value = localStorage.target;
+  render();
 }
 
-
-function addPerson(){
-
-people.push({name:"",paid:0})
-render()
-
+function addPerson() {
+  people.push({name:"",paid:0});
+  render();
 }
 
-
-function addTransfer(){
-
-if(people.length<2)return
-
-transfers.push({from:0,to:1,amount:0})
-render()
-
+function addTransfer() {
+  if(people.length < 2) return;
+  transfers.push({from:0,to:1,amount:0});
+  render();
 }
 
+function render() {
+  let p = document.getElementById("people");
+  p.innerHTML = "";
+  people.forEach((x,i)=>{
+    let div = document.createElement("div");
+    div.className = "row fade";
+    div.innerHTML = `
+      <input value="${x.name}" placeholder="Имя" onchange="people[${i}].name=this.value;save()">
+      <input type="number" value="${x.paid}" onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
+      <button class="delete" onclick="people.splice(${i},1);save()">×</button>
+    `;
+    p.appendChild(div);
+    setTimeout(()=>div.classList.add("show"), 10);
+  });
 
-function render(){
-
-let p=document.getElementById("people")
-p.innerHTML=""
-
-people.forEach((x,i)=>{
-
-p.innerHTML+=`
-
-<div class="row">
-
-<input value="${x.name}" placeholder="Имя"
-onchange="people[${i}].name=this.value;save()">
-
-<input type="number" value="${x.paid}"
-onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
-
-<button class="delete"
-onclick="people.splice(${i},1);save()">×</button>
-
-</div>
-`
-
-})
-
-
-let t=document.getElementById("transfers")
-t.innerHTML=""
-
-transfers.forEach((x,i)=>{
-
-let a=""
-let b=""
-
-people.forEach((p,j)=>{
-
-a+=`<option value="${j}" ${j==x.from?'selected':''}>${p.name||"?"}</option>`
-b+=`<option value="${j}" ${j==x.to?'selected':''}>${p.name||"?"}</option>`
-
-})
-
-t.innerHTML+=`
-
-<div class="row">
-
-<select onchange="transfers[${i}].from=this.value;save()">
-${a}
-</select>
-
-<span>→</span>
-
-<select onchange="transfers[${i}].to=this.value;save()">
-${b}
-</select>
-
-<input type="number" value="${x.amount}"
-onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
-
-<button class="delete"
-onclick="transfers.splice(${i},1);save()">×</button>
-
-</div>
-
-`
-
-})
-
+  let t = document.getElementById("transfers");
+  t.innerHTML = "";
+  transfers.forEach((x,i)=>{
+    let a="", b="";
+    people.forEach((p,j)=>{
+      a+=`<option value="${j}" ${j==x.from?'selected':''}>${p.name||"?"}</option>`;
+      b+=`<option value="${j}" ${j==x.to?'selected':''}>${p.name||"?"}</option>`;
+    });
+    let div = document.createElement("div");
+    div.className="row fade";
+    div.innerHTML = `
+      <select onchange="transfers[${i}].from=this.value;save()">${a}</select>
+      <span>→</span>
+      <select onchange="transfers[${i}].to=this.value;save()">${b}</select>
+      <input type="number" value="${x.amount}" onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
+      <button class="delete" onclick="transfers.splice(${i},1);save()">×</button>
+    `;
+    t.appendChild(div);
+    setTimeout(()=>div.classList.add("show"), 10);
+  });
 }
 
+function calculate() {
+  let targetValue=parseFloat(target.value)||0;
+  let n=people.length;
+  if(!n) return;
 
-function calculate(){
+  let paid=[], transfersEffect=[], actual=[];
+  let total=0;
+  people.forEach((p,i)=>{
+    paid[i]=p.paid||0;
+    transfersEffect[i]=0;
+    actual[i]=p.paid||0;
+    total+=paid[i];
+  });
 
-let targetValue=parseFloat(target.value)||0
-let n=people.length
-if(!n)return
+  transfers.forEach(t=>{
+    let a=parseFloat(t.amount)||0;
+    transfersEffect[t.from]+=a;
+    transfersEffect[t.to]-=a;
+    actual[t.from]+=a;
+    actual[t.to]-=a;
+  });
 
-let paid=[]
-let transfersEffect=[]
-let actual=[]
+  if(!targetValue) targetValue=total;
+  let share = targetValue/n;
 
-let total=0
+  let balances=[];
+  actual.forEach((a,i)=>balances[i]=a-share);
 
-people.forEach((p,i)=>{
+  // --- HTML верхний ряд: внесено, цель, недобор/излишек, доля ---
+  let percent=Math.min(100,(total/targetValue)*100);
+  let html=`
+  <div class="summary">
+    <div class="summary-card">
+      <div>Внесено</div>
+      <strong>${total.toFixed(2)} ₽</strong>
+    </div>
+    <div class="summary-card">
+      <div>Цель</div>
+      <strong>${targetValue.toFixed(2)} ₽</strong>
+    </div>
+    <div class="summary-card">
+      <div>${targetValue>total?"Недобор":"Излишек"}</div>
+      <strong>${Math.abs(targetValue-total).toFixed(2)} ₽</strong>
+    </div>
+    <div class="summary-card">
+      <div>Равная доля</div>
+      <strong>${share.toFixed(2)} ₽</strong>
+    </div>
+  </div>
+  <div class="progress">
+    <div class="bar" style="width:${percent}%">${percent.toFixed(0)}%</div>
+  </div>
+  `;
 
-paid[i]=p.paid||0
-transfersEffect[i]=0
-actual[i]=p.paid||0
-total+=paid[i]
+  // --- участники ---
+  people.forEach((p,i)=>{
+    let status = balances[i]>0 ? `получит ${balances[i].toFixed(2)} ₽` : `должен ${Math.abs(balances[i]).toFixed(2)} ₽`;
+    let cls = balances[i]>0 ? "pos" : "neg";
+    html+=`
+      <div class="person">
+        <strong>${p.name}</strong><br>
+        <div class="status ${cls}">${status}</div>
+      </div>
+    `;
+  });
 
-})
+  document.getElementById("balances").innerHTML=html;
+  document.querySelectorAll(".person").forEach(el=>setTimeout(()=>el.classList.add("show"),10));
 
-
-transfers.forEach(t=>{
-
-let a=parseFloat(t.amount)||0
-
-transfersEffect[t.from]+=a
-transfersEffect[t.to]-=a
-
-actual[t.from]+=a
-actual[t.to]-=a
-
-})
-
-
-if(!targetValue)targetValue=total
-
-let share=targetValue/n
-
-
-let balances=[]
-actual.forEach((a,i)=>balances[i]=a-share)
-
-
-let percent=Math.min(100,(total/targetValue)*100)
-
-let html=`
-
-<div class="summary">
-
-<div class="summary-card">
-<div>Внесено</div>
-<strong>${total.toFixed(2)} ₽</strong>
-</div>
-
-<div class="summary-card">
-<div>Цель</div>
-<strong>${targetValue.toFixed(2)} ₽</strong>
-</div>
-
-<div class="summary-card">
-<div>${targetValue>total?"Недобор":"Излишек"}</div>
-<strong>${Math.abs(targetValue-total).toFixed(2)} ₽</strong>
-</div>
-
-</div>
-
-<div class="progress">
-<div class="bar" style="width:${percent}%"></div>
-</div>
-
-`
-
-people.forEach((p,i)=>{
-
-let diff=balances[i]
-let cls=diff>0?"pos":"neg"
-
-html+=`
-
-<div class="person">
-
-<strong>${p.name}</strong><br>
-
-заплатил: ${paid[i].toFixed(2)} ₽<br>
-
-переводы: ${transfersEffect[i]>0?'+':''}${transfersEffect[i].toFixed(2)} ₽<br>
-
-итого внес: ${actual[i].toFixed(2)} ₽<br>
-
-<span class="${cls}">
-баланс: ${diff>0?"получит":"должен"} ${Math.abs(diff).toFixed(2)} ₽
-</span>
-
-</div>
-
-`
-
-})
-
-document.getElementById("balances").innerHTML=html
-
-
-
-let creditors=[]
-let debtors=[]
-
-balances.forEach((b,i)=>{
-
-if(b>0)creditors.push({i,amount:b})
-if(b<0)debtors.push({i,amount:-b})
-
-})
-
-
-let debts=[]
-
-while(debtors.length&&creditors.length){
-
-let d=debtors[0]
-let c=creditors[0]
-
-let pay=Math.min(d.amount,c.amount)
-
-debts.push(`${people[d.i].name} должен перевести ${people[c.i].name}: ${pay.toFixed(2)} ₽`)
-
-d.amount-=pay
-c.amount-=pay
-
-if(d.amount<0.01)debtors.shift()
-if(c.amount<0.01)creditors.shift()
-
+  // --- расчёт долгов ---
+  let creditors=[], debtors=[], debts=[];
+  balances.forEach((b,i)=>{ if(b>0) creditors.push({i,amount:b}); if(b<0) debtors.push({i,amount:-b}); });
+  while(debtors.length && creditors.length){
+    let d=debtors[0], c=creditors[0];
+    let pay=Math.min(d.amount,c.amount);
+    debts.push(`${people[d.i].name} → ${people[c.i].name}: ${pay.toFixed(2)} ₽`);
+    d.amount-=pay;
+    c.amount-=pay;
+    if(d.amount<0.01) debtors.shift();
+    if(c.amount<0.01) creditors.shift();
+  }
+  if(targetValue>total){
+    debtors.forEach(d=>{
+      debts.push(`${people[d.i].name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`);
+    });
+  }
+  result.innerHTML=debts.map(d=>`<div class="result-line">${d}</div>`).join("");
 }
 
-
-if(targetValue>total){
-
-debtors.forEach(d=>{
-debts.push(`${people[d.i].name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`)
-})
-
-}
-
-
-result.innerHTML=debts.map(d=>`<div class="result-line">${d}</div>`).join("")
-
-}
-
-
-load()
-
+load();
 </script>
-
 </body>
 </html>
-

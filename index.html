@@ -265,6 +265,7 @@ function calculate() {
 
   const shareCents = Math.round(targetAmount * 100 / validPeople.length);
 
+  // Таблица баланса
   let html = `
     <div class="total-line">
       Внесено: ${(totalPaidCents/100).toFixed(2)} ₽<br>
@@ -296,7 +297,7 @@ function calculate() {
   });
   html += '</tbody></table>';
 
-  // Кто кому должен + недобор
+  // Кто кому должен
   let creditors = [], debtors = [];
   for (const name in balancesCents) {
     let diffRub = (balancesCents[name] - shareCents) / 100;
@@ -319,7 +320,7 @@ function calculate() {
     if (creditors[ci].amount < 0.01) ci++;
   }
 
-  // Недобор распределяем только на тех, кто остался в минусе после внутренних долгов
+  // Недобор только на оставшихся должниках (после внутренних переводов)
   const totalShortfall = Math.max(0, targetAmount - (totalPaidCents / 100));
   if (totalShortfall > 0.01) {
     let remainingDebtors = debtors.filter(d => d.amount > 0.01);

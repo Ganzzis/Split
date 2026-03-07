@@ -320,9 +320,8 @@ function calculate() {
 
   const shortfall = targetAmount - (totalPaidCents / 100);
   if (shortfall > 0.01) {
-    const perPerson = shortfall / validPeople.length;
     debts.push(`<strong>Общая касса недобрана на ${shortfall.toFixed(2)} ₽</strong>`);
-    debts.push(`Каждый должен докинуть ${perPerson.toFixed(2)} ₽`);
+    debts.push(`Каждый должен докинуть ${ (shortfall / validPeople.length).toFixed(2)} ₽`);
   } else if (shortfall < -0.01) {
     debts.push(`<strong>Излишек в общей кассе: ${Math.abs(shortfall).toFixed(2)} ₽</strong>`);
   }

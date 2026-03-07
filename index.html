@@ -1,21 +1,15 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Split Bill</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="manifest" href="manifest.json">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#007aff">
+<title>Разделить счёт</title>
 
 <style>
 
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 background:#f2f2f7;
 margin:0;
 padding:20px;
@@ -23,13 +17,14 @@ color:#1c1c1e;
 }
 
 .container{
-max-width:600px;
+max-width:520px;
 margin:auto;
 }
 
 h1{
 text-align:center;
 font-weight:600;
+margin-bottom:20px;
 }
 
 .card{
@@ -37,18 +32,13 @@ background:white;
 border-radius:16px;
 padding:16px;
 margin-bottom:16px;
-box-shadow:0 6px 16px rgba(0,0,0,0.08);
-animation:fade .3s ease;
-}
-
-@keyframes fade{
-from{opacity:0;transform:translateY(8px)}
-to{opacity:1}
+box-shadow:0 2px 8px rgba(0,0,0,0.06);
 }
 
 .row{
 display:flex;
-gap:8px;
+gap:10px;
+align-items:center;
 margin-bottom:10px;
 }
 
@@ -68,25 +58,96 @@ font-size:15px;
 cursor:pointer;
 }
 
-.blue{background:#007aff;color:white}
-.gray{background:#8e8e93;color:white}
-.red{background:#ff3b30;color:white}
+.btn{
+background:#007aff;
+color:white;
+}
 
-.balance-pos{color:#34c759;font-weight:600}
-.balance-neg{color:#ff3b30;font-weight:600}
+.btn-delete{
+background:#ff3b30;
+color:white;
+width:36px;
+height:36px;
+}
+
+.summary{
+display:flex;
+gap:10px;
+margin-bottom:10px;
+}
+
+.summary-card{
+flex:1;
+background:#f7f7fa;
+padding:10px;
+border-radius:12px;
+text-align:center;
+}
+
+.summary-title{
+font-size:12px;
+color:#8e8e93;
+}
+
+.summary-value{
+font-size:18px;
+font-weight:600;
+}
+
+.progress-bar{
+width:100%;
+height:10px;
+background:#e5e5ea;
+border-radius:10px;
+overflow:hidden;
+margin-top:8px;
+}
+
+.progress-fill{
+height:100%;
+background:#007aff;
+width:0%;
+}
+
+.progress-text{
+font-size:13px;
+color:#8e8e93;
+text-align:center;
+margin-top:4px;
+}
+
+.person-balance{
+background:#f9f9fb;
+padding:12px;
+border-radius:12px;
+margin-top:8px;
+}
+
+.person-name{
+font-weight:600;
+}
+
+.person-paid{
+font-size:14px;
+color:#8e8e93;
+}
+
+.pos{
+color:#34c759;
+font-weight:600;
+}
+
+.neg{
+color:#ff3b30;
+font-weight:600;
+}
 
 .result-line{
 padding:6px 0;
 border-bottom:1px solid #eee;
 }
 
-.qr{
-text-align:center;
-margin-top:10px;
-}
-
 </style>
-
 </head>
 
 <body>
@@ -97,11 +158,15 @@ margin-top:10px;
 
 <div class="card">
 
-<label>Целевая сумма</label>
+<h3>Целевая сумма</h3>
 
-<input id="target" type="number" placeholder="например 11000">
+<div class="row">
+<input id="target" type="number" placeholder="Сколько нужно собрать">
+<button class="btn" onclick="save()">Сохранить</button>
+</div>
 
 </div>
+
 
 <div class="card">
 
@@ -109,9 +174,10 @@ margin-top:10px;
 
 <div id="people"></div>
 
-<button class="blue" onclick="addPerson()">Добавить</button>
+<button class="btn" onclick="addPerson()">Добавить человека</button>
 
 </div>
+
 
 <div class="card">
 
@@ -119,18 +185,17 @@ margin-top:10px;
 
 <div id="transfers"></div>
 
-<button class="blue" onclick="addTransfer()">Добавить</button>
+<button class="btn" onclick="addTransfer()">Добавить перевод</button>
 
 </div>
+
 
 <div class="card">
 
-<div class="row">
-<button class="blue" onclick="calculate()">Рассчитать</button>
-<button class="gray" onclick="share()">Поделиться</button>
-</div>
+<button class="btn" onclick="calculate()">Рассчитать</button>
 
 </div>
+
 
 <div class="card">
 
@@ -140,76 +205,80 @@ margin-top:10px;
 
 </div>
 
+
 <div class="card">
 
 <h3>Кто кому должен</h3>
 
-<div id="debts"></div>
-
-<div class="qr" id="qr"></div>
+<div id="result"></div>
 
 </div>
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
 
-let people=JSON.parse(localStorage.getItem("people")||"[]")
-let transfers=JSON.parse(localStorage.getItem("transfers")||"[]")
+let people=[]
+let transfers=[]
+
 
 function save(){
 
-localStorage.setItem("people",JSON.stringify(people))
-localStorage.setItem("transfers",JSON.stringify(transfers))
+localStorage.people=JSON.stringify(people)
+localStorage.transfers=JSON.stringify(transfers)
+localStorage.target=document.getElementById("target").value
+
+render()
 
 }
+
+
+function load(){
+
+if(localStorage.people)people=JSON.parse(localStorage.people)
+if(localStorage.transfers)transfers=JSON.parse(localStorage.transfers)
+if(localStorage.target)document.getElementById("target").value=localStorage.target
+
+render()
+
+}
+
 
 function addPerson(){
 
 people.push({name:"",paid:0})
-
-renderPeople()
-
-}
-
-function deletePerson(i){
-
-people.splice(i,1)
-
-renderPeople()
-
-renderTransfers()
-
-save()
+render()
 
 }
 
-function renderPeople(){
 
-let el=document.getElementById("people")
+function addTransfer(){
 
-el.innerHTML=""
+if(people.length<2)return alert("Нужно минимум 2 человека")
+
+transfers.push({from:0,to:1,amount:0})
+render()
+
+}
+
+
+function render(){
+
+let pdiv=document.getElementById("people")
+pdiv.innerHTML=""
 
 people.forEach((p,i)=>{
 
-el.innerHTML+=`
+pdiv.innerHTML+=`
 
 <div class="row">
 
-<input
-placeholder="имя"
-value="${p.name}"
-oninput="people[${i}].name=this.value;renderTransfers();save()">
+<input placeholder="Имя" value="${p.name}" onchange="people[${i}].name=this.value;save()">
 
-<input
-type="number"
-placeholder="заплатил"
-value="${p.paid}"
-oninput="people[${i}].paid=parseFloat(this.value)||0;save()">
+<input type="number" value="${p.paid}" onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
 
-<button class="red" onclick="deletePerson(${i})">×</button>
+<button class="btn-delete" onclick="people.splice(${i},1);save()">×</button>
 
 </div>
 
@@ -217,120 +286,177 @@ oninput="people[${i}].paid=parseFloat(this.value)||0;save()">
 
 })
 
-}
-
-function addTransfer(){
-
-transfers.push({from:0,to:0,amount:0})
-
-renderTransfers()
-
-save()
-
-}
-
-function deleteTransfer(i){
-
-transfers.splice(i,1)
-
-renderTransfers()
-
-save()
-
-}
-
-function renderTransfers(){
-
-let el=document.getElementById("transfers")
-
-el.innerHTML=""
+let tdiv=document.getElementById("transfers")
+tdiv.innerHTML=""
 
 transfers.forEach((t,i)=>{
 
-let options=""
+let opts=""
 
-people.forEach((p,idx)=>{
+people.forEach((p,j)=>{
 
-options+=`<option value="${idx}">${p.name||("чел "+(idx+1))}</option>`
+opts+=`<option value="${j}" ${j==t.from?"selected":""}>${p.name||"?"}</option>`
 
 })
 
-el.innerHTML+=`
+let opts2=""
+
+people.forEach((p,j)=>{
+
+opts2+=`<option value="${j}" ${j==t.to?"selected":""}>${p.name||"?"}</option>`
+
+})
+
+tdiv.innerHTML+=`
 
 <div class="row">
 
 <select onchange="transfers[${i}].from=this.value;save()">
-${options}
+${opts}
 </select>
+
+<span>→</span>
 
 <select onchange="transfers[${i}].to=this.value;save()">
-${options}
+${opts2}
 </select>
 
-<input
-type="number"
-placeholder="сумма"
-value="${t.amount}"
-oninput="transfers[${i}].amount=parseFloat(this.value)||0;save()">
+<input type="number" value="${t.amount}" onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
 
-<button class="red" onclick="deleteTransfer(${i})">×</button>
+<button class="btn-delete" onclick="transfers.splice(${i},1);save()">×</button>
 
 </div>
 
 `
 
-document.querySelectorAll("#transfers select")[i*2].value=t.from
-document.querySelectorAll("#transfers select")[i*2+1].value=t.to
-
 })
 
 }
 
+
 function calculate(){
 
-let n=people.length
+let target=parseFloat(document.getElementById("target").value)||0
 
+let n=people.length
 if(n==0)return
 
-let target=parseFloat(document.getElementById("target").value)
+let paid=[]
+let actual=[]
+let totalPaid=0
 
-let paid=people.map(p=>p.paid)
 
-transfers.forEach(t=>{
+people.forEach((p,i)=>{
 
-paid[t.from]+=t.amount
-paid[t.to]-=t.amount
+paid[i]=p.paid||0
+actual[i]=p.paid||0
+
+totalPaid+=paid[i]
 
 })
 
-let totalPaid=paid.reduce((a,b)=>a+b,0)
 
-if(!target)target=totalPaid
+transfers.forEach(t=>{
+
+let a=parseFloat(t.amount)||0
+
+actual[t.from]+=a
+actual[t.to]-=a
+
+})
+
+
+if(target<=0)target=totalPaid
 
 let share=target/n
 
-let balances=paid.map(p=>p-share)
 
-let html=""
+let balances=[]
+
+actual.forEach((a,i)=>{
+
+balances[i]=a-share
+
+})
+
+
+let percent=Math.min(100,(totalPaid/target)*100)
+
+
+let html=`
+
+<div class="summary">
+
+<div class="summary-card">
+<div class="summary-title">Внесено</div>
+<div class="summary-value">${totalPaid.toFixed(2)} ₽</div>
+</div>
+
+<div class="summary-card">
+<div class="summary-title">Цель</div>
+<div class="summary-value">${target.toFixed(2)} ₽</div>
+</div>
+
+<div class="summary-card">
+<div class="summary-title">${target>totalPaid?"Недобор":"Излишек"}</div>
+<div class="summary-value">${Math.abs(target-totalPaid).toFixed(2)} ₽</div>
+</div>
+
+</div>
+
+<div class="progress-bar">
+<div class="progress-fill" style="width:${percent}%"></div>
+</div>
+
+<div class="progress-text">
+${percent.toFixed(0)}% собрано
+</div>
+
+`
+
 
 people.forEach((p,i)=>{
 
 let diff=balances[i]
 
-let cls=diff>=0?"balance-pos":"balance-neg"
+let status=""
+let cls=""
+
+if(diff>0){
+
+status=`💰 получит ${diff.toFixed(2)} ₽`
+cls="pos"
+
+}else{
+
+status=`💸 должен ${Math.abs(diff).toFixed(2)} ₽`
+cls="neg"
+
+}
 
 html+=`
-<div>
-${p.name||("чел "+(i+1))} —
-<span class="${cls}">
-${diff>0?"+":""}${diff.toFixed(2)} ₽
-</span>
+
+<div class="person-balance">
+
+<div class="person-name">${p.name}</div>
+
+<div class="person-paid">
+заплатил ${paid[i].toFixed(2)} ₽
 </div>
+
+<div class="${cls}">
+${status}
+</div>
+
+</div>
+
 `
 
 })
 
 document.getElementById("balances").innerHTML=html
+
+
 
 let creditors=[]
 let debtors=[]
@@ -342,68 +468,45 @@ if(b<0)debtors.push({i,amount:-b})
 
 })
 
-let result=[]
 
-while(creditors.length&&debtors.length){
+let debts=[]
 
-let c=creditors[0]
+
+while(debtors.length && creditors.length){
+
 let d=debtors[0]
+let c=creditors[0]
 
-let pay=Math.min(c.amount,d.amount)
+let pay=Math.min(d.amount,c.amount)
 
-result.push(`${people[d.i].name} → ${people[c.i].name} : ${pay.toFixed(2)} ₽`)
+debts.push(`${people[d.i].name} должен перевести ${people[c.i].name}: ${pay.toFixed(2)} ₽`)
 
-c.amount-=pay
 d.amount-=pay
+c.amount-=pay
 
-if(c.amount<0.01)creditors.shift()
 if(d.amount<0.01)debtors.shift()
+if(c.amount<0.01)creditors.shift()
 
 }
 
-let totalShortfall=Math.max(0,target-totalPaid)
 
-if(totalShortfall>0){
+if(target>totalPaid){
 
-result.push(`Недобор: ${totalShortfall.toFixed(2)} ₽`)
+debtors.forEach(d=>{
 
-}
+debts.push(`${people[d.i].name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`)
 
-document.getElementById("debts").innerHTML=result
-.map(x=>`<div class="result-line">${x}</div>`)
-.join("")
-
-generateQR(result.join("\n"))
-
-}
-
-function generateQR(text){
-
-let qrDiv=document.getElementById("qr")
-
-qrDiv.innerHTML=""
-
-new QRCode(qrDiv,{
-text:text,
-width:150,
-height:150
 })
 
 }
 
-function share(){
 
-let text=document.getElementById("debts").innerText
-
-navigator.share({
-title:"Разделить счёт",
-text:text
-})
+document.getElementById("result").innerHTML=debts.map(d=>`<div class="result-line">${d}</div>`).join("")
 
 }
 
-renderPeople()
-renderTransfers()
+
+load()
 
 </script>
 

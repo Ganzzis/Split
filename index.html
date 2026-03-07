@@ -1,372 +1,411 @@
 <!DOCTYPE html>
+
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Разделить счёт</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Split Bill</title>
 
-  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi0KDQsNCz0L7QstC+0LLRgdC60LDRjyDQuNC90LjRgdC60L7Qs9C+Iiwic2hvcnRfbmFtZSI6IlJhemRlbGl0IHNjaG90Iiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZjJmMmY3IiwidGhlbWVfY29sb3IiOiIjMDA3YWZmIiwiaWNvbnMiOlt7InNyYyI6Ii9pY29uLTE5Mi5wbmciLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn0seyJzcmMiOiIvaWNvbi01MTIucG5nIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
+<link rel="manifest" href="manifest.json">
 
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Разделить счёт">
-  <meta name="theme-color" content="#007aff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#007aff">
 
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+<style>
 
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; color: #1c1c1e; min-height: 100dvh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-    .container { max-width: 500px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
-    h1 { text-align: center; font-weight: 600; margin-bottom: 28px; font-size: 28px; }
-    h3 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
-    .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .person-item { position: relative; background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px 12px 54px; margin-bottom: 12px; }
-    .person-item::before { content: attr(data-num); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; background: #007aff; color: white; border-radius: 50%; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
-    .transfer-item { background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    input, select { flex: 1 1 auto; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; box-sizing: border-box; }
-    .arrow { font-size: 20px; color: #8e8e93; padding: 0 4px; }
-    button { border: none; border-radius: 10px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
-    .btn { background: #007aff; color: white; }
-    .btn-gray { background: #8e8e93; color: white; }
-    .btn-red { background: #ff3b30; color: white; }
-    .btn-delete { flex: 0 0 36px; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 36px; background: #ff3b30; color: white; border-radius: 10px; }
-    .target-row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
-    .target-row input { flex: 1; }
-    .balance-table { width: 100%; border-collapse: collapse; }
-    .balance-table th, .balance-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e5e5ea; }
-    .balance-table th { font-weight: 600; color: #8e8e93; font-size: 14px; }
-    .balance-table td { font-size: 15px; }
-    .balance-pos { color: #34c759; font-weight: 600; }
-    .balance-neg { color: #ff3b30; font-weight: 600; }
-    .total-line { font-weight: 600; margin: 12px 0 8px; padding: 8px; background: #f0f0f5; border-radius: 10px; }
-    .actions { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-    .result-line { padding: 6px 0; border-bottom: 1px solid #eee; }
-    .reset-message { text-align: center; color: #ff3b30; font-weight: bold; margin: 10px 0; display: none; }
-    @supports (padding-top: env(safe-area-inset-top)) { body { padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px; } }
-  </style>
+body{
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:#f2f2f7;
+margin:0;
+padding:20px;
+color:#1c1c1e;
+}
+
+.container{
+max-width:600px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+font-weight:600;
+}
+
+.card{
+background:white;
+border-radius:16px;
+padding:16px;
+margin-bottom:16px;
+box-shadow:0 6px 16px rgba(0,0,0,0.08);
+animation:fade .3s ease;
+}
+
+@keyframes fade{
+from{opacity:0;transform:translateY(8px)}
+to{opacity:1}
+}
+
+.row{
+display:flex;
+gap:8px;
+margin-bottom:10px;
+}
+
+input,select{
+flex:1;
+padding:10px;
+border-radius:10px;
+border:1px solid #ddd;
+font-size:16px;
+}
+
+button{
+border:none;
+border-radius:10px;
+padding:10px 14px;
+font-size:15px;
+cursor:pointer;
+}
+
+.blue{background:#007aff;color:white}
+.gray{background:#8e8e93;color:white}
+.red{background:#ff3b30;color:white}
+
+.balance-pos{color:#34c759;font-weight:600}
+.balance-neg{color:#ff3b30;font-weight:600}
+
+.result-line{
+padding:6px 0;
+border-bottom:1px solid #eee;
+}
+
+.qr{
+text-align:center;
+margin-top:10px;
+}
+
+</style>
+
 </head>
+
 <body>
 
 <div class="container">
-  <h1>Разделить счёт</h1>
 
-  <div class="card">
-    <h3>Целевая сумма сбора</h3>
-    <div class="target-row">
-      <input type="number" id="targetInput" min="0" placeholder="Сколько нужно собрать (если пусто — сумма взносов)" style="flex:1">
-      <button class="btn" onclick="saveTarget()">Сохранить цель</button>
-    </div>
-  </div>
+<h1>Разделить счёт</h1>
 
-  <div class="card">
-    <h3>Участники</h3>
-    <div id="people"></div>
-    <button class="btn" onclick="addPerson()">Добавить</button>
-  </div>
+<div class="card">
 
-  <div class="card">
-    <h3>Переводы</h3>
-    <div id="transfers"></div>
-    <button class="btn" onclick="addTransfer()">Добавить</button>
-  </div>
+<label>Целевая сумма</label>
 
-  <div class="card">
-    <div class="actions">
-      <button class="btn" onclick="calculate()">Рассчитать</button>
-      <button class="btn-gray" onclick="share()">Поделиться</button>
-    </div>
-  </div>
+<input id="target" type="number" placeholder="например 11000">
 
-  <div class="card">
-    <h3>Баланс</h3>
-    <div id="balances"></div>
-  </div>
-
-  <div class="card">
-    <h3>Кто кому должен</h3>
-    <div id="result"></div>
-  </div>
-
-  <div class="card">
-    <button class="btn-red" onclick="resetAll()">Сбросить всё</button>
-    <div id="resetMessage" class="reset-message">Сброшено! Добавьте новых участников.</div>
-  </div>
 </div>
 
+<div class="card">
+
+<h3>Участники</h3>
+
+<div id="people"></div>
+
+<button class="blue" onclick="addPerson()">Добавить</button>
+
+</div>
+
+<div class="card">
+
+<h3>Переводы</h3>
+
+<div id="transfers"></div>
+
+<button class="blue" onclick="addTransfer()">Добавить</button>
+
+</div>
+
+<div class="card">
+
+<div class="row">
+<button class="blue" onclick="calculate()">Рассчитать</button>
+<button class="gray" onclick="share()">Поделиться</button>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Баланс</h3>
+
+<div id="balances"></div>
+
+</div>
+
+<div class="card">
+
+<h3>Кто кому должен</h3>
+
+<div id="debts"></div>
+
+<div class="qr" id="qr"></div>
+
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
-let people = [];
-let transfers = [];
-let targetAmount = 0;
-window.lastShare = null;
 
-function save() {
-  localStorage.setItem("split_people", JSON.stringify(people));
-  localStorage.setItem("split_transfers", JSON.stringify(transfers));
-  localStorage.setItem("split_target", targetAmount);
+let people=JSON.parse(localStorage.getItem("people")||"[]")
+let transfers=JSON.parse(localStorage.getItem("transfers")||"[]")
+
+function save(){
+
+localStorage.setItem("people",JSON.stringify(people))
+localStorage.setItem("transfers",JSON.stringify(transfers))
+
 }
 
-function load() {
-  let p = localStorage.getItem("split_people");
-  let t = localStorage.getItem("split_transfers");
-  let tar = localStorage.getItem("split_target");
-  if (p) people = JSON.parse(p);
-  if (t) transfers = JSON.parse(t);
-  if (tar) targetAmount = parseFloat(tar) || 0;
-  document.getElementById("targetInput").value = targetAmount || "";
-  render();
+function addPerson(){
+
+people.push({name:"",paid:0})
+
+renderPeople()
+
 }
 
-function getValidPeople() {
-  return people.filter(p => p.name && p.name.trim()).map(p => p.name.trim());
+function deletePerson(i){
+
+people.splice(i,1)
+
+renderPeople()
+
+renderTransfers()
+
+save()
+
 }
 
-function render() {
-  const peopleDiv = document.getElementById("people");
-  peopleDiv.innerHTML = "";
+function renderPeople(){
 
-  people.forEach((p, i) => {
-    const name = (p.name || "").trim().replace(/"/g, "&quot;");
-    const paid = Math.max(0, Number(p.paid) || 0);
-    peopleDiv.innerHTML += `
-      <div class="person-item" data-num="${i + 1}">
-        <div class="row">
-          <input value="${name}" onchange="updatePersonName(${i}, this.value)" placeholder="Имя">
-          <input type="number" min="0" value="${paid}" onchange="updatePersonPaid(${i}, this.value)">
-          <button class="btn-delete" onclick="removePerson(${i})">×</button>
-        </div>
-      </div>
-    `;
-  });
+let el=document.getElementById("people")
 
-  renderTransfers();
+el.innerHTML=""
+
+people.forEach((p,i)=>{
+
+el.innerHTML+=`
+
+<div class="row">
+
+<input
+placeholder="имя"
+value="${p.name}"
+oninput="people[${i}].name=this.value;renderTransfers();save()">
+
+<input
+type="number"
+placeholder="заплатил"
+value="${p.paid}"
+oninput="people[${i}].paid=parseFloat(this.value)||0;save()">
+
+<button class="red" onclick="deletePerson(${i})">×</button>
+
+</div>
+
+`
+
+})
+
 }
 
-function renderTransfers() {
-  const div = document.getElementById("transfers");
-  div.innerHTML = "";
+function addTransfer(){
 
-  const names = getValidPeople();
+transfers.push({from:0,to:0,amount:0})
 
-  transfers = transfers.filter(t => names.includes(t.from) && names.includes(t.to));
+renderTransfers()
 
-  transfers.forEach((t, i) => {
-    let opts1 = names.map(n => `<option ${n === t.from ? 'selected' : ''}>${n}</option>`).join("");
-    let opts2 = names.map(n => `<option ${n === t.to ? 'selected' : ''}>${n}</option>`).join("");
+save()
 
-    div.innerHTML += `
-      <div class="transfer-item">
-        <div class="row">
-          <select onchange="updateTransferFrom(${i}, this.value)">${opts1 || '<option disabled>—</option>'}</select>
-          <span class="arrow">→</span>
-          <select onchange="updateTransferTo(${i}, this.value)">${opts2 || '<option disabled>—</option>'}</select>
-          <input type="number" min="0" value="${Math.max(0, t.amount || 0)}" onchange="updateTransferAmount(${i}, this.value)">
-          <button class="btn-delete" onclick="removeTransfer(${i})">×</button>
-        </div>
-      </div>
-    `;
-  });
-
-  save();
 }
 
-function addPerson() {
-  people.push({ name: "", paid: 0 });
-  render();
+function deleteTransfer(i){
+
+transfers.splice(i,1)
+
+renderTransfers()
+
+save()
+
 }
 
-function removePerson(i) {
-  const removedName = people[i]?.name?.trim();
-  people.splice(i, 1);
-  if (removedName) {
-    transfers = transfers.filter(t => t.from !== removedName && t.to !== removedName);
-  }
-  render();
+function renderTransfers(){
+
+let el=document.getElementById("transfers")
+
+el.innerHTML=""
+
+transfers.forEach((t,i)=>{
+
+let options=""
+
+people.forEach((p,idx)=>{
+
+options+=`<option value="${idx}">${p.name||("чел "+(idx+1))}</option>`
+
+})
+
+el.innerHTML+=`
+
+<div class="row">
+
+<select onchange="transfers[${i}].from=this.value;save()">
+${options}
+</select>
+
+<select onchange="transfers[${i}].to=this.value;save()">
+${options}
+</select>
+
+<input
+type="number"
+placeholder="сумма"
+value="${t.amount}"
+oninput="transfers[${i}].amount=parseFloat(this.value)||0;save()">
+
+<button class="red" onclick="deleteTransfer(${i})">×</button>
+
+</div>
+
+`
+
+document.querySelectorAll("#transfers select")[i*2].value=t.from
+document.querySelectorAll("#transfers select")[i*2+1].value=t.to
+
+})
+
 }
 
-function updatePersonName(i, v) {
-  const trimmed = v.trim();
-  if (trimmed && people.some((p, idx) => idx !== i && p.name.trim() === trimmed)) {
-    alert("Имя уже используется");
-    return;
-  }
-  people[i].name = trimmed;
-  render();
+function calculate(){
+
+let n=people.length
+
+if(n==0)return
+
+let target=parseFloat(document.getElementById("target").value)
+
+let paid=people.map(p=>p.paid)
+
+transfers.forEach(t=>{
+
+paid[t.from]+=t.amount
+paid[t.to]-=t.amount
+
+})
+
+let totalPaid=paid.reduce((a,b)=>a+b,0)
+
+if(!target)target=totalPaid
+
+let share=target/n
+
+let balances=paid.map(p=>p-share)
+
+let html=""
+
+people.forEach((p,i)=>{
+
+let diff=balances[i]
+
+let cls=diff>=0?"balance-pos":"balance-neg"
+
+html+=`
+<div>
+${p.name||("чел "+(i+1))} —
+<span class="${cls}">
+${diff>0?"+":""}${diff.toFixed(2)} ₽
+</span>
+</div>
+`
+
+})
+
+document.getElementById("balances").innerHTML=html
+
+let creditors=[]
+let debtors=[]
+
+balances.forEach((b,i)=>{
+
+if(b>0)creditors.push({i,amount:b})
+if(b<0)debtors.push({i,amount:-b})
+
+})
+
+let result=[]
+
+while(creditors.length&&debtors.length){
+
+let c=creditors[0]
+let d=debtors[0]
+
+let pay=Math.min(c.amount,d.amount)
+
+result.push(`${people[d.i].name} → ${people[c.i].name} : ${pay.toFixed(2)} ₽`)
+
+c.amount-=pay
+d.amount-=pay
+
+if(c.amount<0.01)creditors.shift()
+if(d.amount<0.01)debtors.shift()
+
 }
 
-function updatePersonPaid(i, v) {
-  people[i].paid = Math.max(0, parseFloat(v) || 0);
-  save();
+let totalShortfall=Math.max(0,target-totalPaid)
+
+if(totalShortfall>0){
+
+result.push(`Недобор: ${totalShortfall.toFixed(2)} ₽`)
+
 }
 
-function addTransfer() {
-  const names = getValidPeople();
-  if (names.length < 2) return alert("Нужно минимум 2 человека с именами");
-  transfers.push({ from: names[0], to: names[1], amount: 0 });
-  renderTransfers();
+document.getElementById("debts").innerHTML=result
+.map(x=>`<div class="result-line">${x}</div>`)
+.join("")
+
+generateQR(result.join("\n"))
+
 }
 
-function removeTransfer(i) {
-  transfers.splice(i, 1);
-  renderTransfers();
+function generateQR(text){
+
+let qrDiv=document.getElementById("qr")
+
+qrDiv.innerHTML=""
+
+new QRCode(qrDiv,{
+text:text,
+width:150,
+height:150
+})
+
 }
 
-function updateTransferFrom(i, v) {
-  transfers[i].from = v;
-  save();
+function share(){
+
+let text=document.getElementById("debts").innerText
+
+navigator.share({
+title:"Разделить счёт",
+text:text
+})
+
 }
 
-function updateTransferTo(i, v) {
-  transfers[i].to = v;
-  save();
-}
+renderPeople()
+renderTransfers()
 
-function updateTransferAmount(i, v) {
-  transfers[i].amount = Math.max(0, parseFloat(v) || 0);
-  save();
-}
-
-function saveTarget() {
-  targetAmount = Math.max(0, parseFloat(document.getElementById("targetInput").value) || 0);
-  save();
-  calculate();
-}
-
-function calculate() {
-  const validPeople = people.filter(p => p.name && p.name.trim());
-  if (validPeople.length === 0) return;
-
-  let totalPaidCents = 0;
-  const actualCents = {};
-  const balancesCents = {};
-
-  validPeople.forEach(p => {
-    const cents = Math.round(p.paid * 100);
-    const name = p.name.trim();
-    actualCents[name] = cents;
-    balancesCents[name] = cents;
-    totalPaidCents += cents;
-  });
-
-  transfers.forEach(t => {
-    const amt = Math.round(t.amount * 100);
-    if (t.from in actualCents) actualCents[t.from] += amt;
-    if (t.to in actualCents) actualCents[t.to] -= amt;
-    if (t.from in balancesCents) balancesCents[t.from] += amt;
-    if (t.to in balancesCents) balancesCents[t.to] -= amt;
-  });
-
-  if (targetAmount <= 0) {
-    targetAmount = totalPaidCents / 100;
-    document.getElementById("targetInput").value = targetAmount.toFixed(2);
-  }
-
-  const shareCents = Math.round(targetAmount * 100 / validPeople.length);
-
-  // Таблица баланса
-  let html = `
-    <div class="total-line">
-      Внесено: ${(totalPaidCents/100).toFixed(2)} ₽<br>
-      Цель: ${targetAmount.toFixed(2)} ₽<br>
-      <strong>${targetAmount > totalPaidCents/100 ? 'Недобор' : 'Излишек'}: 
-      ${Math.abs(targetAmount - totalPaidCents/100).toFixed(2)} ₽</strong>
-    </div>
-    <table class="balance-table">
-      <thead><tr><th>Имя</th><th>Доля</th><th>Внёс</th><th>Разница</th></tr></thead>
-      <tbody>
-  `;
-
-  validPeople.forEach(p => {
-    const name = p.name.trim();
-    const share = shareCents / 100;
-    const actual = (actualCents[name] || 0) / 100;
-    const diff = actual - share;
-    const cls = diff > 0.009 ? "balance-pos" : (diff < -0.009 ? "balance-neg" : "");
-    const sign = diff > 0.009 ? "+" : (diff < -0.009 ? "" : "");
-
-    html += `
-      <tr>
-        <td>${name}</td>
-        <td>${share.toFixed(2)} ₽</td>
-        <td>${actual.toFixed(2)} ₽</td>
-        <td class="${cls}">${sign}${diff.toFixed(2)} ₽</td>
-      </tr>
-    `;
-  });
-  html += '</tbody></table>';
-
-  // Кто кому должен
-  let creditors = [], debtors = [];
-  for (const name in balancesCents) {
-    let diffRub = (balancesCents[name] - shareCents) / 100;
-    if (diffRub > 0.01) creditors.push({name, amount: diffRub});
-    if (diffRub < -0.01) debtors.push({name, amount: -diffRub});
-  }
-
-  creditors.sort((a,b)=>b.amount-a.amount);
-  debtors.sort((a,b)=>b.amount-a.amount);
-
-  let debts = [];
-  let di = 0, ci = 0;
-  while (di < debtors.length && ci < creditors.length) {
-    let pay = Math.min(debtors[di].amount, creditors[ci].amount);
-    pay = Math.round(pay * 100) / 100;
-    if (pay >= 0.01) debts.push(`${debtors[di].name} → ${creditors[ci].name} : ${pay.toFixed(2)} ₽`);
-    debtors[di].amount -= pay;
-    creditors[ci].amount -= pay;
-    if (debtors[di].amount < 0.01) di++;
-    if (creditors[ci].amount < 0.01) ci++;
-  }
-
-  // Недобор = сумма оставшихся долгов должников после внутренних переводов
-  const remainingShortfall = debtors.reduce((sum, d) => sum + d.amount, 0);
-  if (remainingShortfall > 0.01) {
-    debtors.forEach(d => {
-      if (d.amount > 0.01) {
-        debts.push(`${d.name} должен докинуть в кассу: ${d.amount.toFixed(2)} ₽`);
-      }
-    });
-    debts.push(`<strong>Общая касса недобрана на ${remainingShortfall.toFixed(2)} ₽</strong>`);
-  } else if (totalShortfall < -0.01) {
-    debts.push(`<strong>Излишек в общей кассе: ${Math.abs(totalShortfall).toFixed(2)} ₽</strong>`);
-  }
-
-  document.getElementById("balances").innerHTML = html;
-  document.getElementById("result").innerHTML = debts.length 
-    ? debts.map(d => `<div class="result-line">${d}</div>`).join("") 
-    : "<p>Всё собрано поровну</p>";
-
-  window.lastShare = debts.join("\n");
-}
-
-function resetAll() {
-  if (!confirm("Сбросить всё?")) return;
-
-  people = [];
-  transfers = [];
-  targetAmount = 0;
-  document.getElementById("targetInput").value = "";
-  localStorage.clear();
-
-  document.getElementById("balances").innerHTML = "";
-  document.getElementById("result").innerHTML = "";
-
-  const msg = document.getElementById("resetMessage");
-  msg.style.display = "block";
-  setTimeout(() => msg.style.display = "none", 4000);
-
-  render();
-}
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
-  });
-}
-
-load();
 </script>
+
 </body>
 </html>

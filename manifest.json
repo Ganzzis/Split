@@ -1,0 +1,15 @@
+{
+"name": "Split счёт",
+"short_name": "Split",
+"start_url": "/",
+"display": "standalone",
+"background_color": "#000000",
+"theme_color": "#007aff",
+"icons": [
+{
+"src": "icon.png",
+"sizes": "512x512",
+"type": "image/png"
+}
+]
+}

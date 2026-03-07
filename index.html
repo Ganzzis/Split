@@ -10,6 +10,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Разделить счёт">
+  <meta name="theme-color" content="#007aff">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
 
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; color: #1c1c1e; min-height: 100dvh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
@@ -313,10 +318,19 @@ function calculate() {
     if (creditors[ci].amount < 0.01) ci++;
   }
 
+  const shortfall = targetAmount - (totalPaidCents / 100);
+  if (shortfall > 0.01) {
+    const perPerson = shortfall / validPeople.length;
+    debts.push(`<strong>Общая касса недобрана на ${shortfall.toFixed(2)} ₽</strong>`);
+    debts.push(`Каждый должен докинуть ${perPerson.toFixed(2)} ₽`);
+  } else if (shortfall < -0.01) {
+    debts.push(`<strong>Излишек в общей кассе: ${Math.abs(shortfall).toFixed(2)} ₽</strong>`);
+  }
+
   document.getElementById("balances").innerHTML = html;
   document.getElementById("result").innerHTML = debts.length 
     ? debts.map(d => `<div class="result-line">${d}</div>`).join("") 
-    : "<p>Все рассчитано поровну</p>";
+    : "<p>Всё собрано поровну</p>";
 
   window.lastShare = debts.join("\n");
 }
@@ -325,7 +339,7 @@ function share() {
   if (!window.lastShare || !window.lastShare.trim()) return alert("Сначала рассчитайте");
 
   if (navigator.share) {
-    navigator.share({ title: "Делёжка счёта", text: window.lastShare });
+    navigator.share({ title: "Разделить счёт", text: window.lastShare });
   } else {
     navigator.clipboard.writeText(window.lastShare).then(() => alert("Скопировано"));
   }
@@ -347,7 +361,7 @@ function resetAll() {
   msg.style.display = "block";
   setTimeout(() => msg.style.display = "none", 4000);
 
-  render(); // перерисовка интерфейса
+  render();
 }
 
 if ('serviceWorker' in navigator) {

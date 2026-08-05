@@ -179,6 +179,7 @@
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
+      min-width: 0;
     }
 
     .input-wrapper:focus-within {
@@ -196,6 +197,7 @@
       color: var(--text-main);
       outline: none;
       font-weight: 500;
+      min-width: 0;
     }
 
     select option {
@@ -220,7 +222,7 @@
       pointer-events: none;
     }
 
-    .flex-grow { flex: 1; }
+    .flex-grow { flex: 1; min-width: 0; }
     .w-140 { width: 140px; flex-shrink: 0; }
     .w-130 { width: 130px; flex-shrink: 0; }
 
@@ -228,7 +230,8 @@
       color: var(--text-muted);
       display: flex;
       align-items: center;
-      padding: 0 4px;
+      padding: 0 2px;
+      flex-shrink: 0;
     }
 
     .btn {
@@ -323,6 +326,7 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      min-width: 0;
     }
 
     .metric-label {
@@ -334,6 +338,7 @@
     .metric-value {
       font-size: 15px;
       font-weight: 700;
+      word-break: break-all;
     }
 
     .progress-container {
@@ -363,6 +368,7 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--text-muted);
+      flex-shrink: 0;
     }
 
     .user-balances {
@@ -380,11 +386,13 @@
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
+      gap: 12px;
     }
 
     .user-name {
       font-weight: 600;
       font-size: 14px;
+      word-break: break-word;
     }
 
     .badge {
@@ -392,6 +400,8 @@
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .badge-danger {
@@ -424,9 +434,46 @@
       font-size: 14px;
       padding: 6px 0;
       border-bottom: 1px solid var(--border-color);
+      word-break: break-word;
     }
     .result-line:last-child {
       border-bottom: none;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 12px 8px;
+      }
+
+      .app-container {
+        padding: 16px 12px;
+        border-radius: var(--radius-md);
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .input-group {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .w-140, .w-130 {
+        width: 100%;
+      }
+
+      .flex-grow {
+        width: 100%;
+      }
+
+      .transfer-arrow {
+        display: none;
+      }
+
+      .btn-icon.danger {
+        margin-left: auto;
+      }
     }
   </style>
 </head>

@@ -1,253 +1,808 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Разделить счёт</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Разделить счёт</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Светлая тема */
+      --bg-main: #F8FAFC;
+      --bg-gradient: radial-gradient(100% 100% at 50% 0%, #F1F5F9 0%, #F8FAFC 100%);
+      --surface: rgba(255, 255, 255, 0.85);
+      --surface-card: #FFFFFF;
+      --border-color: rgba(226, 232, 240, 0.8);
+      --border-focus: #6366F1;
+      
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      
+      --primary: #6366F1;
+      --primary-hover: #4F46E5;
+      --primary-light: #EEF2FF;
+      
+      --danger-bg: #FEF2F2;
+      --danger-text: #EF4444;
+      --danger-hover: #FEE2E2;
+      
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-card: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+      --glass-blur: blur(16px);
+      
+      --input-bg: #FFFFFF;
+      --badge-neutral-bg: #F1F5F9;
+      --badge-neutral-text: #475569;
+      --badge-success-bg: #ECFDF5;
+      --badge-success-text: #059669;
+    }
 
-<style>
-:root{
---bg:#f2f2f7;
---card:#ffffff;
---text:#1c1c1e;
---sub:#8e8e93;
---border:#e5e5ea;
---blue:#007aff;
---green:#34c759;
---red:#ff3b30;
-}
-@media (prefers-color-scheme: dark){
-:root{
---bg:#000;
---card:#1c1c1e;
---text:#fff;
---sub:#8e8e93;
---border:#2c2c2e;
-}
-}
-body{
-font-family:-apple-system,"SF Pro Text",BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-background:var(--bg);
-margin:0;
-padding:16px;
-color:var(--text);
-}
-.container{max-width:520px;margin:auto;}
-h1{text-align:center;margin-bottom:20px;}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid var(--border);}
-.row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
-input,select{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);font-size:16px;background:transparent;color:var(--text);}
-button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;transition: transform 0.1s ease;font-family:inherit;}
-button:active{transform: scale(0.95);}
-.btn{background:var(--blue);color:white;}
-.delete{background:var(--red);color:white;width:36px;}
-.summary{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
-.summary-card{flex:1;text-align:center;background:var(--bg);padding:10px;border-radius:10px;font-size:16px;}
-.progress{height:24px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:8px;position:relative;}
-.bar{height:100%;background:var(--blue);transition: width 0.5s ease;text-align:right;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:white;font-weight:600;font-size:14px;}
-.person{background:var(--bg);padding:12px;border-radius:12px;margin-top:10px;opacity:0;transform:translateY(10px);transition: all 0.4s ease;font-size:16px;}
-.person.show{opacity:1;transform:translateY(0);}
-.status{font-weight:600;margin-top:4px;}
-.pos{color:var(--green);}
-.neg{color:var(--red);}
-.result-line{padding:6px 0;border-bottom:1px solid var(--border);}
-</style>
+    /* Тёмная тема — Glassmorphism & Minimal Enterprise */
+    [data-theme="dark"] {
+      --bg-main: #0B0F17;
+      --bg-gradient: radial-gradient(120% 120% at 50% 0%, #1E1B4B 0%, #0B0F17 50%, #07090E 100%);
+      --surface: rgba(17, 24, 39, 0.65);
+      --surface-card: rgba(30, 41, 59, 0.4);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: #818CF8;
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      
+      --primary: #6366F1;
+      --primary-hover: #818CF8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --danger-text: #FCA5A5;
+      --danger-hover: rgba(239, 68, 68, 0.2);
+      
+      --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --badge-neutral-bg: rgba(255, 255, 255, 0.08);
+      --badge-neutral-text: #94A3B8;
+      --badge-success-bg: rgba(16, 185, 129, 0.15);
+      --badge-success-text: #34D399;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 620px;
+      background: var(--surface);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: 36px;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .header-title p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Переключатель темы */
+    .theme-toggle {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--border-focus);
+      transform: scale(1.05);
+    }
+
+    .section {
+      margin-bottom: 28px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .input-group, .list-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .dynamic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    input, select {
+      width: 100%;
+      height: 42px;
+      border: none;
+      background: transparent;
+      padding: 0 14px;
+      font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      font-weight: 500;
+    }
+
+    select option {
+      background-color: #0F172A;
+      color: #F8FAFC;
+    }
+
+    :root:not([data-theme="dark"]) select option {
+      background-color: #FFFFFF;
+      color: #0F172A;
+    }
+
+    .currency-input input {
+      padding-right: 28px;
+    }
+
+    .currency-symbol {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .flex-grow { flex: 1; }
+    .w-140 { width: 140px; }
+    .w-130 { width: 130px; }
+
+    .transfers-row select {
+      flex: 1;
+    }
+
+    .transfer-arrow {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+    }
+
+    .btn {
+      height: 42px;
+      padding: 0 18px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--primary-hover);
+      padding: 0 10px;
+    }
+
+    .btn-ghost:hover {
+      background: var(--primary-light);
+    }
+
+    .btn-sm {
+      height: 36px;
+      font-size: 13px;
+    }
+
+    .btn-lg {
+      height: 48px;
+      font-size: 15px;
+    }
+
+    .full-width { width: 100%; }
+
+    .btn-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .btn-icon.danger:hover {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .action-block {
+      margin: 32px 0;
+    }
+
+    /* Результаты */
+    .results-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 28px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .metric-card.accent-warning .metric-value {
+      color: #F59E0B;
+    }
+
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .progress-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .user-balances {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .user-balance-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+    }
+
+    .user-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--badge-neutral-bg);
+      color: var(--badge-neutral-text);
+    }
+
+    .badge-danger {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .badge-success {
+      background: var(--badge-success-bg);
+      color: var(--badge-success-text);
+    }
+
+    .summary-section {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: var(--radius-md);
+    }
+
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .summary-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-hover);
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+
+    .highlight {
+      font-weight: 700;
+      color: var(--primary-hover);
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-<h1>Разделить счёт</h1>
 
-<div class="card">
-<h3>Целевая сумма</h3>
-<div class="row">
-<input id="target" type="number">
-<button class="btn" onclick="save()">Сохранить</button>
-</div>
-</div>
-
-<div class="card">
-<h3>Участники</h3>
-<div id="people"></div>
-<button class="btn" onclick="addPerson()">Добавить</button>
-</div>
-
-<div class="card">
-<h3>Переводы</h3>
-<div id="transfers"></div>
-<button class="btn" onclick="addTransfer()">Добавить</button>
-</div>
-
-<div class="card">
-<button class="btn" onclick="calculate()">Рассчитать</button>
-</div>
-
-<div class="card">
-<h3>Баланс</h3>
-<div id="balances"></div>
-</div>
-
-<div class="card">
-<h3>Кто кому должен</h3>
-<div id="result"></div>
-</div>
-</div>
-
-<script>
-let people = [];
-let transfers = [];
-
-function save() {
-  localStorage.people = JSON.stringify(people);
-  localStorage.transfers = JSON.stringify(transfers);
-  localStorage.target = target.value;
-  render();
-}
-
-function load() {
-  if(localStorage.people) people = JSON.parse(localStorage.people);
-  if(localStorage.transfers) transfers = JSON.parse(localStorage.transfers);
-  if(localStorage.target) target.value = localStorage.target;
-  render();
-}
-
-function addPerson() {
-  people.push({name:"",paid:0});
-  render();
-}
-
-function addTransfer() {
-  if(people.length < 2) return;
-  transfers.push({from:0,to:1,amount:0});
-  render();
-}
-
-function render() {
-  let p = document.getElementById("people");
-  p.innerHTML = "";
-  people.forEach((x,i)=>{
-    let div = document.createElement("div");
-    div.className = "row fade";
-    div.innerHTML = `
-      <input value="${x.name}" placeholder="Имя" onchange="people[${i}].name=this.value;save()">
-      <input type="number" value="${x.paid}" onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
-      <button class="delete" onclick="people.splice(${i},1);save()">×</button>
-    `;
-    p.appendChild(div);
-    setTimeout(()=>div.classList.add("show"), 10);
-  });
-
-  let t = document.getElementById("transfers");
-  t.innerHTML = "";
-  transfers.forEach((x,i)=>{
-    let a="", b="";
-    people.forEach((p,j)=>{
-      a+=`<option value="${j}" ${j==x.from?'selected':''}>${p.name||"?"}</option>`;
-      b+=`<option value="${j}" ${j==x.to?'selected':''}>${p.name||"?"}</option>`;
-    });
-    let div = document.createElement("div");
-    div.className="row fade";
-    div.innerHTML = `
-      <select onchange="transfers[${i}].from=this.value;save()">${a}</select>
-      <span>→</span>
-      <select onchange="transfers[${i}].to=this.value;save()">${b}</select>
-      <input type="number" value="${x.amount}" onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
-      <button class="delete" onclick="transfers.splice(${i},1);save()">×</button>
-    `;
-    t.appendChild(div);
-    setTimeout(()=>div.classList.add("show"), 10);
-  });
-}
-
-function calculate() {
-  let targetValue=parseFloat(target.value)||0;
-  let n=people.length;
-  if(!n) return;
-
-  let paid=[], transfersEffect=[], actual=[];
-  let total=0;
-  people.forEach((p,i)=>{
-    paid[i]=p.paid||0;
-    transfersEffect[i]=0;
-    actual[i]=p.paid||0;
-    total+=paid[i];
-  });
-
-  transfers.forEach(t=>{
-    let a=parseFloat(t.amount)||0;
-    transfersEffect[t.from]+=a;
-    transfersEffect[t.to]-=a;
-    actual[t.from]+=a;
-    actual[t.to]-=a;
-  });
-
-  if(!targetValue) targetValue=total;
-  let share = targetValue/n;
-
-  let balances=[];
-  actual.forEach((a,i)=>balances[i]=a-share);
-
-  // --- HTML верхний ряд: внесено, цель, недобор/излишек, доля ---
-  let percent=Math.min(100,(total/targetValue)*100);
-  let html=`
-  <div class="summary">
-    <div class="summary-card">
-      <div>Внесено</div>
-      <strong>${total.toFixed(2)} ₽</strong>
-    </div>
-    <div class="summary-card">
-      <div>Цель</div>
-      <strong>${targetValue.toFixed(2)} ₽</strong>
-    </div>
-    <div class="summary-card">
-      <div>${targetValue>total?"Недобор":"Излишек"}</div>
-      <strong>${Math.abs(targetValue-total).toFixed(2)} ₽</strong>
-    </div>
-    <div class="summary-card">
-      <div>Равная доля</div>
-      <strong>${share.toFixed(2)} ₽</strong>
-    </div>
-  </div>
-  <div class="progress">
-    <div class="bar" style="width:${percent}%">${percent.toFixed(0)}%</div>
-  </div>
-  `;
-
-  // --- участники ---
-  people.forEach((p,i)=>{
-    let status = balances[i]>0 ? `получит ${balances[i].toFixed(2)} ₽` : `должен ${Math.abs(balances[i]).toFixed(2)} ₽`;
-    let cls = balances[i]>0 ? "pos" : "neg";
-    html+=`
-      <div class="person">
-        <strong>${p.name}</strong><br>
-        <div class="status ${cls}">${status}</div>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-title">
+        <h1>Разделить счёт</h1>
+        <p>Расчёт общих трат и взаимных взаимозачётов</p>
       </div>
-    `;
-  });
+      <button class="theme-toggle" id="theme-toggle-btn" title="Сменить тему">
+        <!-- Sun Icon -->
+        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <!-- Moon Icon -->
+        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </header>
 
-  document.getElementById("balances").innerHTML=html;
-  document.querySelectorAll(".person").forEach(el=>setTimeout(()=>el.classList.add("show"),10));
+    <main class="app-content">
+      
+      <!-- Целевая сумма -->
+      <section class="section">
+        <h2 class="section-label">Целевая сумма</h2>
+        <div class="input-group">
+          <div class="input-wrapper currency-input flex-grow">
+            <input type="number" id="target-amount" value="10000" placeholder="0">
+            <span class="currency-symbol">₽</span>
+          </div>
+        </div>
+      </section>
 
-  // --- расчёт долгов ---
-  let creditors=[], debtors=[], debts=[];
-  balances.forEach((b,i)=>{ if(b>0) creditors.push({i,amount:b}); if(b<0) debtors.push({i,amount:-b}); });
-  while(debtors.length && creditors.length){
-    let d=debtors[0], c=creditors[0];
-    let pay=Math.min(d.amount,c.amount);
-    debts.push(`${people[d.i].name} → ${people[c.i].name}: ${pay.toFixed(2)} ₽`);
-    d.amount-=pay;
-    c.amount-=pay;
-    if(d.amount<0.01) debtors.shift();
-    if(c.amount<0.01) creditors.shift();
-  }
-  if(targetValue>total){
-    debtors.forEach(d=>{
-      debts.push(`${people[d.i].name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`);
+      <!-- Участники -->
+      <section class="section">
+        <h2 class="section-label">Участники</h2>
+        <div class="dynamic-list" id="members-list">
+          <!-- Динамические строки участников -->
+        </div>
+        <button class="btn btn-ghost btn-sm" id="add-member-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Добавить участника
+        </button>
+      </section>
+
+      <!-- Переводы -->
+      <section class="section">
+        <h2 class="section-label">Переводы между участниками</h2>
+        <div class="dynamic-list" id="transfers-list">
+          <!-- Динамические строки переводов -->
+        </div>
+        <button class="btn btn-ghost btn-sm" id="add-transfer-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Добавить перевод
+        </button>
+      </section>
+
+      <!-- Кнопка Рассчитать -->
+      <div class="action-block">
+        <button class="btn btn-primary btn-lg full-width" id="calculate-btn">Рассчитать итоги</button>
+      </div>
+
+      <!-- Результаты -->
+      <section class="section results-section">
+        <h2 class="section-label">Баланс</h2>
+        
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Внесено</span>
+            <span class="metric-value" id="m-total-paid">0 ₽</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Цель</span>
+            <span class="metric-value" id="m-target">0 ₽</span>
+          </div>
+          <div class="metric-card accent-warning">
+            <span class="metric-label" id="m-diff-label">Недобор</span>
+            <span class="metric-value" id="m-diff-value">0 ₽</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Равная доля</span>
+            <span class="metric-value" id="m-fair-share">0 ₽</span>
+          </div>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+          </div>
+          <span class="progress-text" id="progress-text">0%</span>
+        </div>
+
+        <div class="user-balances" id="user-balances-list">
+          <!-- Динамический список балансов пользователей -->
+        </div>
+      </section>
+
+      <!-- Итоги -->
+      <section class="section summary-section">
+        <h2 class="section-label">Итоговые переводы</h2>
+        <div class="summary-list" id="summary-list">
+          <!-- Итоговый вердикт -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Логика темы
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+    const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+
+    function setTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      }
+      localStorage.setItem('theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      setTheme(isDark ? 'light' : 'dark');
     });
-  }
-  result.innerHTML=debts.map(d=>`<div class="result-line">${d}</div>`).join("");
-}
 
-load();
-</script>
+    // Начальное состояние
+    let members = [
+      { id: 1, name: 'Игорь', amount: 500 },
+      { id: 2, name: 'Константин', amount: 1000 }
+    ];
+
+    let transfers = [
+      { id: 1, from: 'Игорь', to: 'Константин', amount: 2000 }
+    ];
+
+    let nextMemberId = 3;
+    let nextTransferId = 2;
+
+    const trashIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+    function formatMoney(val) {
+      return Math.round(val).toLocaleString('ru-RU') + ' ₽';
+    }
+
+    // Рендер участников
+    function renderMembers() {
+      const container = document.getElementById('members-list');
+      container.innerHTML = '';
+
+      members.forEach((m) => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.innerHTML = `
+          <div class="input-wrapper flex-grow">
+            <input type="text" value="${m.name}" placeholder="Имя" onchange="updateMemberName(${m.id}, this.value)">
+          </div>
+          <div class="input-wrapper currency-input w-140">
+            <input type="number" value="${m.amount || ''}" placeholder="Внёс" onchange="updateMemberAmount(${m.id}, this.value)">
+            <span class="currency-symbol">₽</span>
+          </div>
+          <button class="btn-icon danger" onclick="removeMember(${m.id})" title="Удалить">${trashIcon}</button>
+        `;
+        container.appendChild(row);
+      });
+      
+      updateSelectOptions();
+    }
+
+    // Рендер переводов
+    function renderTransfers() {
+      const container = document.getElementById('transfers-list');
+      container.innerHTML = '';
+
+      transfers.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'list-row transfers-row';
+        
+        let optionsFrom = members.map(m => `<option value="${m.name}" ${m.name === t.from ? 'selected' : ''}>${m.name}</option>`).join('');
+        let optionsTo = members.map(m => `<option value="${m.name}" ${m.name === t.to ? 'selected' : ''}>${m.name}</option>`).join('');
+
+        row.innerHTML = `
+          <div class="input-wrapper flex-grow">
+            <select onchange="updateTransfer(${t.id}, 'from', this.value)">${optionsFrom}</select>
+          </div>
+          <div class="transfer-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+          <div class="input-wrapper flex-grow">
+            <select onchange="updateTransfer(${t.id}, 'to', this.value)">${optionsTo}</select>
+          </div>
+          <div class="input-wrapper currency-input w-130">
+            <input type="number" value="${t.amount || ''}" placeholder="Сумма" onchange="updateTransfer(${t.id}, 'amount', this.value)">
+            <span class="currency-symbol">₽</span>
+          </div>
+          <button class="btn-icon danger" onclick="removeTransfer(${t.id})" title="Удалить">${trashIcon}</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function updateSelectOptions() {
+      renderTransfers();
+    }
+
+    // Обработчики действий
+    function updateMemberName(id, val) {
+      const m = members.find(x => x.id === id);
+      if (m) m.name = val;
+      updateSelectOptions();
+    }
+
+    function updateMemberAmount(id, val) {
+      const m = members.find(x => x.id === id);
+      if (m) m.amount = parseFloat(val) || 0;
+    }
+
+    function removeMember(id) {
+      members = members.filter(m => m.id !== id);
+      renderMembers();
+    }
+
+    function updateTransfer(id, field, val) {
+      const t = transfers.find(x => x.id === id);
+      if (t) {
+        if (field === 'amount') t[field] = parseFloat(val) || 0;
+        else t[field] = val;
+      }
+    }
+
+    function removeTransfer(id) {
+      transfers = transfers.filter(t => t.id !== id);
+      renderTransfers();
+    }
+
+    document.getElementById('add-member-btn').addEventListener('click', () => {
+      members.push({ id: nextMemberId++, name: `Участник ${members.length + 1}`, amount: 0 });
+      renderMembers();
+    });
+
+    document.getElementById('add-transfer-btn').addEventListener('click', () => {
+      const name1 = members[0] ? members[0].name : '';
+      const name2 = members[1] ? members[1].name : name1;
+      transfers.push({ id: nextTransferId++, from: name1, to: name2, amount: 0 });
+      renderTransfers();
+    });
+
+    // Логика Расчёта
+    function calculate() {
+      const target = parseFloat(document.getElementById('target-amount').value) || 0;
+      const totalPaid = members.reduce((sum, m) => sum + (m.amount || 0), 0);
+      const memberCount = members.length || 1;
+      const fairShare = target / memberCount;
+
+      // Заполнение метрик
+      document.getElementById('m-total-paid').innerText = formatMoney(totalPaid);
+      document.getElementById('m-target').innerText = formatMoney(target);
+      document.getElementById('m-fair-share').innerText = formatMoney(fairShare);
+
+      const diff = target - totalPaid;
+      if (diff >= 0) {
+        document.getElementById('m-diff-label').innerText = 'Недобор';
+        document.getElementById('m-diff-value').innerText = formatMoney(diff);
+      } else {
+        document.getElementById('m-diff-label').innerText = 'Перебор';
+        document.getElementById('m-diff-value').innerText = formatMoney(Math.abs(diff));
+      }
+
+      // Прогресс
+      const pct = target > 0 ? Math.min(Math.round((totalPaid / target) * 100), 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-text').innerText = `Собрано ${pct}%`;
+
+      // Расчет чистого баланса
+      const balances = {};
+      members.forEach(m => {
+        balances[m.name] = (m.amount || 0) - fairShare;
+      });
+
+      transfers.forEach(t => {
+        if (t.from && t.to && t.amount) {
+          balances[t.from] = (balances[t.from] || 0) + t.amount;
+          balances[t.to] = (balances[t.to] || 0) - t.amount;
+        }
+      });
+
+      // Рендер Персонального баланса
+      const userBalContainer = document.getElementById('user-balances-list');
+      userBalContainer.innerHTML = '';
+
+      members.forEach(m => {
+        const bal = balances[m.name] || 0;
+        const card = document.createElement('div');
+        card.className = 'user-balance-card';
+        
+        let badgeHTML = '';
+        if (bal < -0.01) {
+          badgeHTML = `<span class="badge badge-danger">должен ${formatMoney(Math.abs(bal))}</span>`;
+        } else if (bal > 0.01) {
+          badgeHTML = `<span class="badge badge-success">плюс ${formatMoney(bal)}</span>`;
+        } else {
+          badgeHTML = `<span class="badge">в расчёте</span>`;
+        }
+
+        card.innerHTML = `<span class="user-name">${m.name}</span>${badgeHTML}`;
+        userBalContainer.appendChild(card);
+      });
+
+      // Рендер Итоговых выводов
+      const summaryContainer = document.getElementById('summary-list');
+      summaryContainer.innerHTML = '';
+
+      members.forEach(m => {
+        const bal = balances[m.name] || 0;
+        if (Math.abs(bal) > 0.01) {
+          const item = document.createElement('div');
+          item.className = 'summary-item';
+          
+          const icon = `<div class="summary-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>`;
+          
+          let text = '';
+          if (bal < 0) {
+            text = `<p><strong>${m.name}</strong> должен доложить в кассу <span class="highlight">${formatMoney(Math.abs(bal))}</span></p>`;
+          } else {
+            text = `<p><strong>${m.name}</strong> должен получить из кассы <span class="highlight">${formatMoney(bal)}</span></p>`;
+          }
+
+          item.innerHTML = icon + text;
+          summaryContainer.appendChild(item);
+        }
+      });
+
+      if (summaryContainer.children.length === 0) {
+        summaryContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Все участники в расчёте!</p>';
+      }
+    }
+
+    document.getElementById('calculate-btn').addEventListener('click', calculate);
+
+    // Первичный рендер при загрузке
+    renderMembers();
+    calculate();
+  </script>
 </body>
 </html>

@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Светлая тема */
       --bg-main: #F8FAFC;
       --bg-gradient: radial-gradient(100% 100% at 50% 0%, #F1F5F9 0%, #F8FAFC 100%);
       --surface: rgba(255, 255, 255, 0.85);
@@ -26,24 +25,20 @@
       
       --danger-bg: #FEF2F2;
       --danger-text: #EF4444;
-      --danger-hover: #FEE2E2;
       
+      --success-bg: #ECFDF5;
+      --success-text: #059669;
+
       --radius-lg: 20px;
       --radius-md: 12px;
       --radius-sm: 8px;
       
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
       --shadow-card: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
       --glass-blur: blur(16px);
       
       --input-bg: #FFFFFF;
-      --badge-neutral-bg: #F1F5F9;
-      --badge-neutral-text: #475569;
-      --badge-success-bg: #ECFDF5;
-      --badge-success-text: #059669;
     }
 
-    /* Тёмная тема — Glassmorphism & Minimal Enterprise */
     [data-theme="dark"] {
       --bg-main: #0B0F17;
       --bg-gradient: radial-gradient(120% 120% at 50% 0%, #1E1B4B 0%, #0B0F17 50%, #07090E 100%);
@@ -61,15 +56,12 @@
       
       --danger-bg: rgba(239, 68, 68, 0.12);
       --danger-text: #FCA5A5;
-      --danger-hover: rgba(239, 68, 68, 0.2);
       
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --success-text: #34D399;
+
       --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      
       --input-bg: rgba(15, 23, 42, 0.6);
-      --badge-neutral-bg: rgba(255, 255, 255, 0.08);
-      --badge-neutral-text: #94A3B8;
-      --badge-success-bg: rgba(16, 185, 129, 0.15);
-      --badge-success-text: #34D399;
     }
 
     * {
@@ -100,7 +92,6 @@
       box-shadow: var(--shadow-card);
       padding: 36px;
       border: 1px solid var(--border-color);
-      transition: all 0.3s ease;
     }
 
     .app-header {
@@ -122,11 +113,16 @@
       color: var(--text-muted);
     }
 
-    /* Переключатель темы */
-    .theme-toggle {
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon-header {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      color: var(--text-main);
+      color: var(--text-muted);
       width: 40px;
       height: 40px;
       border-radius: var(--radius-md);
@@ -137,9 +133,16 @@
       transition: all 0.2s ease;
     }
 
-    .theme-toggle:hover {
+    .btn-icon-header:hover {
       border-color: var(--border-focus);
+      color: var(--text-main);
       transform: scale(1.05);
+    }
+
+    .btn-icon-header.reset-btn:hover {
+      border-color: var(--danger-text);
+      color: var(--danger-text);
+      background: var(--danger-bg);
     }
 
     .section {
@@ -155,7 +158,7 @@
       margin-bottom: 12px;
     }
 
-    .input-group, .list-row {
+    .input-group {
       display: flex;
       gap: 10px;
       align-items: center;
@@ -174,6 +177,8 @@
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
     }
 
     .input-wrapper:focus-within {
@@ -210,25 +215,20 @@
     .currency-symbol {
       position: absolute;
       right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
       color: var(--text-muted);
       font-size: 14px;
       pointer-events: none;
     }
 
     .flex-grow { flex: 1; }
-    .w-140 { width: 140px; }
-    .w-130 { width: 130px; }
-
-    .transfers-row select {
-      flex: 1;
-    }
+    .w-140 { width: 140px; flex-shrink: 0; }
+    .w-130 { width: 130px; flex-shrink: 0; }
 
     .transfer-arrow {
       color: var(--text-muted);
       display: flex;
       align-items: center;
+      padding: 0 4px;
     }
 
     .btn {
@@ -303,7 +303,6 @@
       margin: 32px 0;
     }
 
-    /* Результаты */
     .results-section {
       border-top: 1px solid var(--border-color);
       padding-top: 28px;
@@ -335,10 +334,6 @@
     .metric-value {
       font-size: 15px;
       font-weight: 700;
-    }
-
-    .metric-card.accent-warning .metric-value {
-      color: #F59E0B;
     }
 
     .progress-container {
@@ -374,6 +369,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      margin-bottom: 24px;
     }
 
     .user-balance-card {
@@ -396,8 +392,6 @@
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
-      background: var(--badge-neutral-bg);
-      color: var(--badge-neutral-text);
     }
 
     .badge-danger {
@@ -406,8 +400,8 @@
     }
 
     .badge-success {
-      background: var(--badge-success-bg);
-      color: var(--badge-success-text);
+      background: var(--success-bg);
+      color: var(--success-text);
     }
 
     .summary-section {
@@ -423,30 +417,16 @@
       gap: 12px;
     }
 
-    .summary-item {
+    .result-line {
       display: flex;
       align-items: center;
       gap: 12px;
       font-size: 14px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-color);
     }
-
-    .summary-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--primary-hover);
-      box-shadow: var(--shadow-sm);
-      flex-shrink: 0;
-    }
-
-    .highlight {
-      font-weight: 700;
-      color: var(--primary-hover);
+    .result-line:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
@@ -458,12 +438,15 @@
         <h1>Разделить счёт</h1>
         <p>Расчёт общих трат и взаимных взаимозачётов</p>
       </div>
-      <button class="theme-toggle" id="theme-toggle-btn" title="Сменить тему">
-        <!-- Sun Icon -->
-        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <!-- Moon Icon -->
-        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
+      <div class="header-actions">
+        <button class="btn-icon-header reset-btn" id="reset-btn" title="Сбросить всё">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+        <button class="btn-icon-header" id="theme-toggle-btn" title="Сменить тему">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
     </header>
 
     <main class="app-content">
@@ -473,7 +456,7 @@
         <h2 class="section-label">Целевая сумма</h2>
         <div class="input-group">
           <div class="input-wrapper currency-input flex-grow">
-            <input type="number" id="target-amount" value="10000" placeholder="0">
+            <input type="number" id="target" placeholder="0">
             <span class="currency-symbol">₽</span>
           </div>
         </div>
@@ -482,10 +465,8 @@
       <!-- Участники -->
       <section class="section">
         <h2 class="section-label">Участники</h2>
-        <div class="dynamic-list" id="members-list">
-          <!-- Динамические строки участников -->
-        </div>
-        <button class="btn btn-ghost btn-sm" id="add-member-btn">
+        <div class="dynamic-list" id="people"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addPerson()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           Добавить участника
         </button>
@@ -494,10 +475,8 @@
       <!-- Переводы -->
       <section class="section">
         <h2 class="section-label">Переводы между участниками</h2>
-        <div class="dynamic-list" id="transfers-list">
-          <!-- Динамические строки переводов -->
-        </div>
-        <button class="btn btn-ghost btn-sm" id="add-transfer-btn">
+        <div class="dynamic-list" id="transfers"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addTransfer()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           Добавить перевод
         </button>
@@ -505,49 +484,48 @@
 
       <!-- Кнопка Рассчитать -->
       <div class="action-block">
-        <button class="btn btn-primary btn-lg full-width" id="calculate-btn">Рассчитать итоги</button>
+        <button class="btn btn-primary btn-lg full-width" onclick="calculate()">Рассчитать итоги</button>
       </div>
 
       <!-- Результаты -->
       <section class="section results-section">
         <h2 class="section-label">Баланс</h2>
         
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-label">Внесено</span>
-            <span class="metric-value" id="m-total-paid">0 ₽</span>
+        <div id="summary-metrics">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Внесено</span>
+              <span class="metric-value">0.00 ₽</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Цель</span>
+              <span class="metric-value">0.00 ₽</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Недобор</span>
+              <span class="metric-value">0.00 ₽</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Равная доля</span>
+              <span class="metric-value">0.00 ₽</span>
+            </div>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Цель</span>
-            <span class="metric-value" id="m-target">0 ₽</span>
-          </div>
-          <div class="metric-card accent-warning">
-            <span class="metric-label" id="m-diff-label">Недобор</span>
-            <span class="metric-value" id="m-diff-value">0 ₽</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Равная доля</span>
-            <span class="metric-value" id="m-fair-share">0 ₽</span>
+          <div class="progress-container">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <span class="progress-text">0%</span>
           </div>
         </div>
 
-        <div class="progress-container">
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
-          </div>
-          <span class="progress-text" id="progress-text">0%</span>
-        </div>
-
-        <div class="user-balances" id="user-balances-list">
-          <!-- Динамический список балансов пользователей -->
-        </div>
+        <div class="user-balances" id="balances"></div>
       </section>
 
-      <!-- Итоги -->
+      <!-- Кто кому должен -->
       <section class="section summary-section">
-        <h2 class="section-label">Итоговые переводы</h2>
-        <div class="summary-list" id="summary-list">
-          <!-- Итоговый вердикт -->
+        <h2 class="section-label">Кто кому должен</h2>
+        <div class="summary-list" id="result">
+          <div style="color: var(--text-muted); font-size: 14px;">Нажмите «Рассчитать итоги» для формирования отчёта</div>
         </div>
       </section>
 
@@ -555,7 +533,7 @@
   </div>
 
   <script>
-    // Логика темы
+    // Тема
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const sunIcon = themeToggleBtn.querySelector('.sun-icon');
     const moonIcon = themeToggleBtn.querySelector('.moon-icon');
@@ -573,236 +551,231 @@
       localStorage.setItem('theme', theme);
     }
 
-    const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setTheme('dark');
     } else {
       setTheme('light');
     }
 
     themeToggleBtn.addEventListener('click', () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      setTheme(isDark ? 'light' : 'dark');
+      setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     });
 
-    // Начальное состояние
-    let members = [
-      { id: 1, name: 'Игорь', amount: 500 },
-      { id: 2, name: 'Константин', amount: 1000 }
+    // Исходные данные
+    let people = [
+      { name: "", paid: 0 },
+      { name: "", paid: 0 }
     ];
-
-    let transfers = [
-      { id: 1, from: 'Игорь', to: 'Константин', amount: 2000 }
-    ];
-
-    let nextMemberId = 3;
-    let nextTransferId = 2;
+    let transfers = [];
 
     const trashIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
-    function formatMoney(val) {
-      return Math.round(val).toLocaleString('ru-RU') + ' ₽';
+    function save() {
+      localStorage.people = JSON.stringify(people);
+      localStorage.transfers = JSON.stringify(transfers);
+      localStorage.target = document.getElementById("target").value;
+      render();
     }
 
-    // Рендер участников
-    function renderMembers() {
-      const container = document.getElementById('members-list');
-      container.innerHTML = '';
+    function load() {
+      if(localStorage.people) people = JSON.parse(localStorage.people);
+      if(localStorage.transfers) transfers = JSON.parse(localStorage.transfers);
+      if(localStorage.target) document.getElementById("target").value = localStorage.target;
+      render();
+    }
 
-      members.forEach((m) => {
-        const row = document.createElement('div');
-        row.className = 'list-row';
-        row.innerHTML = `
+    function addPerson() {
+      people.push({name:"", paid:0});
+      render();
+    }
+
+    function addTransfer() {
+      if(people.length < 2) return;
+      transfers.push({from: 0, to: 1, amount: 0});
+      render();
+    }
+
+    function resetCalculator() {
+      document.getElementById("target").value = "";
+      people = [
+        { name: "", paid: 0 },
+        { name: "", paid: 0 }
+      ];
+      transfers = [];
+      localStorage.removeItem('people');
+      localStorage.removeItem('transfers');
+      localStorage.removeItem('target');
+      render();
+      document.getElementById("balances").innerHTML = "";
+      document.getElementById("summary-metrics").innerHTML = `
+        <div class="metrics-grid">
+          <div class="metric-card"><span class="metric-label">Внесено</span><span class="metric-value">0.00 ₽</span></div>
+          <div class="metric-card"><span class="metric-label">Цель</span><span class="metric-value">0.00 ₽</span></div>
+          <div class="metric-card"><span class="metric-label">Недобор</span><span class="metric-value">0.00 ₽</span></div>
+          <div class="metric-card"><span class="metric-label">Равная доля</span><span class="metric-value">0.00 ₽</span></div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 0%;"></div></div>
+          <span class="progress-text">0%</span>
+        </div>
+      `;
+      document.getElementById("result").innerHTML = `<div style="color: var(--text-muted); font-size: 14px;">Нажмите «Рассчитать итоги» для формирования отчёта</div>`;
+    }
+
+    document.getElementById('reset-btn').addEventListener('click', resetCalculator);
+
+    function render() {
+      let p = document.getElementById("people");
+      p.innerHTML = "";
+      people.forEach((x, i) => {
+        let div = document.createElement("div");
+        div.className = "input-group";
+        div.innerHTML = `
           <div class="input-wrapper flex-grow">
-            <input type="text" value="${m.name}" placeholder="Имя" onchange="updateMemberName(${m.id}, this.value)">
+            <input value="${x.name}" placeholder="Имя участника" onchange="people[${i}].name=this.value;save()">
           </div>
           <div class="input-wrapper currency-input w-140">
-            <input type="number" value="${m.amount || ''}" placeholder="Внёс" onchange="updateMemberAmount(${m.id}, this.value)">
+            <input type="number" value="${x.paid || ''}" placeholder="Внёс" onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
             <span class="currency-symbol">₽</span>
           </div>
-          <button class="btn-icon danger" onclick="removeMember(${m.id})" title="Удалить">${trashIcon}</button>
+          <button class="btn-icon danger" onclick="people.splice(${i},1);save()" title="Удалить">${trashIcon}</button>
         `;
-        container.appendChild(row);
+        p.appendChild(div);
       });
-      
-      updateSelectOptions();
-    }
 
-    // Рендер переводов
-    function renderTransfers() {
-      const container = document.getElementById('transfers-list');
-      container.innerHTML = '';
-
-      transfers.forEach(t => {
-        const row = document.createElement('div');
-        row.className = 'list-row transfers-row';
-        
-        let optionsFrom = members.map(m => `<option value="${m.name}" ${m.name === t.from ? 'selected' : ''}>${m.name}</option>`).join('');
-        let optionsTo = members.map(m => `<option value="${m.name}" ${m.name === t.to ? 'selected' : ''}>${m.name}</option>`).join('');
-
-        row.innerHTML = `
-          <div class="input-wrapper flex-grow">
-            <select onchange="updateTransfer(${t.id}, 'from', this.value)">${optionsFrom}</select>
-          </div>
-          <div class="transfer-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-          <div class="input-wrapper flex-grow">
-            <select onchange="updateTransfer(${t.id}, 'to', this.value)">${optionsTo}</select>
-          </div>
+      let t = document.getElementById("transfers");
+      t.innerHTML = "";
+      transfers.forEach((x, i) => {
+        let a = "", b = "";
+        people.forEach((pObj, j) => {
+          a += `<option value="${j}" ${j == x.from ? 'selected' : ''}>${pObj.name || "Участник " + (j+1)}</option>`;
+          b += `<option value="${j}" ${j == x.to ? 'selected' : ''}>${pObj.name || "Участник " + (j+1)}</option>`;
+        });
+        let div = document.createElement("div");
+        div.className = "input-group";
+        div.innerHTML = `
+          <div class="input-wrapper flex-grow"><select onchange="transfers[${i}].from=parseInt(this.value);save()">${a}</select></div>
+          <div class="transfer-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+          <div class="input-wrapper flex-grow"><select onchange="transfers[${i}].to=parseInt(this.value);save()">${b}</select></div>
           <div class="input-wrapper currency-input w-130">
-            <input type="number" value="${t.amount || ''}" placeholder="Сумма" onchange="updateTransfer(${t.id}, 'amount', this.value)">
+            <input type="number" value="${x.amount || ''}" placeholder="Сумма" onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
             <span class="currency-symbol">₽</span>
           </div>
-          <button class="btn-icon danger" onclick="removeTransfer(${t.id})" title="Удалить">${trashIcon}</button>
+          <button class="btn-icon danger" onclick="transfers.splice(${i},1);save()" title="Удалить">${trashIcon}</button>
         `;
-        container.appendChild(row);
+        t.appendChild(div);
       });
     }
 
-    function updateSelectOptions() {
-      renderTransfers();
-    }
-
-    // Обработчики действий
-    function updateMemberName(id, val) {
-      const m = members.find(x => x.id === id);
-      if (m) m.name = val;
-      updateSelectOptions();
-    }
-
-    function updateMemberAmount(id, val) {
-      const m = members.find(x => x.id === id);
-      if (m) m.amount = parseFloat(val) || 0;
-    }
-
-    function removeMember(id) {
-      members = members.filter(m => m.id !== id);
-      renderMembers();
-    }
-
-    function updateTransfer(id, field, val) {
-      const t = transfers.find(x => x.id === id);
-      if (t) {
-        if (field === 'amount') t[field] = parseFloat(val) || 0;
-        else t[field] = val;
-      }
-    }
-
-    function removeTransfer(id) {
-      transfers = transfers.filter(t => t.id !== id);
-      renderTransfers();
-    }
-
-    document.getElementById('add-member-btn').addEventListener('click', () => {
-      members.push({ id: nextMemberId++, name: `Участник ${members.length + 1}`, amount: 0 });
-      renderMembers();
-    });
-
-    document.getElementById('add-transfer-btn').addEventListener('click', () => {
-      const name1 = members[0] ? members[0].name : '';
-      const name2 = members[1] ? members[1].name : name1;
-      transfers.push({ id: nextTransferId++, from: name1, to: name2, amount: 0 });
-      renderTransfers();
-    });
-
-    // Логика Расчёта
     function calculate() {
-      const target = parseFloat(document.getElementById('target-amount').value) || 0;
-      const totalPaid = members.reduce((sum, m) => sum + (m.amount || 0), 0);
-      const memberCount = members.length || 1;
-      const fairShare = target / memberCount;
+      let targetInput = document.getElementById("target");
+      let targetValue = parseFloat(targetInput.value) || 0;
+      let n = people.length;
+      if(!n) return;
 
-      // Заполнение метрик
-      document.getElementById('m-total-paid').innerText = formatMoney(totalPaid);
-      document.getElementById('m-target').innerText = formatMoney(target);
-      document.getElementById('m-fair-share').innerText = formatMoney(fairShare);
-
-      const diff = target - totalPaid;
-      if (diff >= 0) {
-        document.getElementById('m-diff-label').innerText = 'Недобор';
-        document.getElementById('m-diff-value').innerText = formatMoney(diff);
-      } else {
-        document.getElementById('m-diff-label').innerText = 'Перебор';
-        document.getElementById('m-diff-value').innerText = formatMoney(Math.abs(diff));
-      }
-
-      // Прогресс
-      const pct = target > 0 ? Math.min(Math.round((totalPaid / target) * 100), 100) : 0;
-      document.getElementById('progress-fill').style.width = pct + '%';
-      document.getElementById('progress-text').innerText = `Собрано ${pct}%`;
-
-      // Расчет чистого баланса
-      const balances = {};
-      members.forEach(m => {
-        balances[m.name] = (m.amount || 0) - fairShare;
+      let paid = [], transfersEffect = [], actual = [];
+      let total = 0;
+      people.forEach((p, i) => {
+        paid[i] = p.paid || 0;
+        transfersEffect[i] = 0;
+        actual[i] = p.paid || 0;
+        total += paid[i];
       });
 
       transfers.forEach(t => {
-        if (t.from && t.to && t.amount) {
-          balances[t.from] = (balances[t.from] || 0) + t.amount;
-          balances[t.to] = (balances[t.to] || 0) - t.amount;
-        }
+        let a = parseFloat(t.amount) || 0;
+        transfersEffect[t.from] += a;
+        transfersEffect[t.to] -= a;
+        actual[t.from] += a;
+        actual[t.to] -= a;
       });
 
-      // Рендер Персонального баланса
-      const userBalContainer = document.getElementById('user-balances-list');
-      userBalContainer.innerHTML = '';
+      if(!targetValue) targetValue = total;
+      let share = targetValue / n;
 
-      members.forEach(m => {
-        const bal = balances[m.name] || 0;
-        const card = document.createElement('div');
-        card.className = 'user-balance-card';
+      let balances = [];
+      actual.forEach((a, i) => balances[i] = a - share);
+
+      let percent = Math.min(100, targetValue > 0 ? (total / targetValue) * 100 : 0);
+      
+      let metricsHtml = `
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Внесено</span>
+          <span class="metric-value">${total.toFixed(2)} ₽</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Цель</span>
+          <span class="metric-value">${targetValue.toFixed(2)} ₽</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">${targetValue >= total ? "Недобор" : "Излишек"}</span>
+          <span class="metric-value">${Math.abs(targetValue - total).toFixed(2)} ₽</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Равная доля</span>
+          <span class="metric-value">${share.toFixed(2)} ₽</span>
+        </div>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: ${percent}%"></div>
+        </div>
+        <span class="progress-text">${percent.toFixed(0)}%</span>
+      </div>
+      `;
+      document.getElementById("summary-metrics").innerHTML = metricsHtml;
+
+      let peopleHtml = "";
+      people.forEach((p, i) => {
+        let status = balances[i] > 0 ? `получит ${balances[i].toFixed(2)} ₽` : `должен ${Math.abs(balances[i]).toFixed(2)} ₽`;
+        let badgeClass = balances[i] > 0 ? "badge-success" : "badge-danger";
+        if(Math.abs(balances[i]) < 0.01) badgeClass = "";
         
-        let badgeHTML = '';
-        if (bal < -0.01) {
-          badgeHTML = `<span class="badge badge-danger">должен ${formatMoney(Math.abs(bal))}</span>`;
-        } else if (bal > 0.01) {
-          badgeHTML = `<span class="badge badge-success">плюс ${formatMoney(bal)}</span>`;
-        } else {
-          badgeHTML = `<span class="badge">в расчёте</span>`;
-        }
+        let displayName = p.name.trim() || `Участник ${i + 1}`;
+        peopleHtml += `
+          <div class="user-balance-card">
+            <span class="user-name">${displayName}</span>
+            <span class="badge ${badgeClass}">${status}</span>
+          </div>
+        `;
+      });
+      document.getElementById("balances").innerHTML = peopleHtml;
 
-        card.innerHTML = `<span class="user-name">${m.name}</span>${badgeHTML}`;
-        userBalContainer.appendChild(card);
+      let creditors = [], debtors = [], debts = [];
+      balances.forEach((b, i) => { 
+        if(b > 0.005) creditors.push({i, amount: b}); 
+        if(b < -0.005) debtors.push({i, amount: -b}); 
       });
 
-      // Рендер Итоговых выводов
-      const summaryContainer = document.getElementById('summary-list');
-      summaryContainer.innerHTML = '';
+      while(debtors.length && creditors.length){
+        let d = debtors[0], c = creditors[0];
+        let pay = Math.min(d.amount, c.amount);
+        let fromName = people[d.i].name.trim() || `Участник ${d.i + 1}`;
+        let toName = people[c.i].name.trim() || `Участник ${c.i + 1}`;
+        debts.push(`${fromName} → ${toName}: ${pay.toFixed(2)} ₽`);
+        d.amount -= pay;
+        c.amount -= pay;
+        if(d.amount < 0.01) debtors.shift();
+        if(c.amount < 0.01) creditors.shift();
+      }
 
-      members.forEach(m => {
-        const bal = balances[m.name] || 0;
-        if (Math.abs(bal) > 0.01) {
-          const item = document.createElement('div');
-          item.className = 'summary-item';
-          
-          const icon = `<div class="summary-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>`;
-          
-          let text = '';
-          if (bal < 0) {
-            text = `<p><strong>${m.name}</strong> должен доложить в кассу <span class="highlight">${formatMoney(Math.abs(bal))}</span></p>`;
-          } else {
-            text = `<p><strong>${m.name}</strong> должен получить из кассы <span class="highlight">${formatMoney(bal)}</span></p>`;
-          }
+      if(targetValue > total){
+        debtors.forEach(d => {
+          let name = people[d.i].name.trim() || `Участник ${d.i + 1}`;
+          debts.push(`${name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`);
+        });
+      }
 
-          item.innerHTML = icon + text;
-          summaryContainer.appendChild(item);
-        }
-      });
-
-      if (summaryContainer.children.length === 0) {
-        summaryContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Все участники в расчёте!</p>';
+      let resultContainer = document.getElementById("result");
+      if(debts.length > 0) {
+        resultContainer.innerHTML = debts.map(d => `<div class="result-line">${d}</div>`).join("");
+      } else {
+        resultContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 14px;">Все участники в полном расчёте!</div>`;
       }
     }
 
-    document.getElementById('calculate-btn').addEventListener('click', calculate);
-
-    // Первичный рендер при загрузке
-    renderMembers();
-    calculate();
+    load();
   </script>
 </body>
 </html>

@@ -1,828 +1,192 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="ru" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Разделить счёт</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-main: #F8FAFC;
-      --bg-gradient: radial-gradient(100% 100% at 50% 0%, #F1F5F9 0%, #F8FAFC 100%);
-      --surface: rgba(255, 255, 255, 0.85);
-      --surface-card: #FFFFFF;
-      --border-color: rgba(226, 232, 240, 0.8);
-      --border-focus: #6366F1;
-      
-      --text-main: #0F172A;
-      --text-muted: #64748B;
-      
-      --primary: #6366F1;
-      --primary-hover: #4F46E5;
-      --primary-light: #EEF2FF;
-      
-      --danger-bg: #FEF2F2;
-      --danger-text: #EF4444;
-      
-      --success-bg: #ECFDF5;
-      --success-text: #059669;
-
-      --radius-lg: 20px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
-      
-      --shadow-card: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-      --glass-blur: blur(16px);
-      
-      --input-bg: #FFFFFF;
-    }
-
-    [data-theme="dark"] {
-      --bg-main: #0B0F17;
-      --bg-gradient: radial-gradient(120% 120% at 50% 0%, #1E1B4B 0%, #0B0F17 50%, #07090E 100%);
-      --surface: rgba(17, 24, 39, 0.65);
-      --surface-card: rgba(30, 41, 59, 0.4);
-      --border-color: rgba(255, 255, 255, 0.08);
-      --border-focus: #818CF8;
-      
-      --text-main: #F8FAFC;
-      --text-muted: #94A3B8;
-      
-      --primary: #6366F1;
-      --primary-hover: #818CF8;
-      --primary-light: rgba(99, 102, 241, 0.15);
-      
-      --danger-bg: rgba(239, 68, 68, 0.12);
-      --danger-text: #FCA5A5;
-      
-      --success-bg: rgba(16, 185, 129, 0.15);
-      --success-text: #34D399;
-
-      --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      --input-bg: rgba(15, 23, 42, 0.6);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    body {
-      background: var(--bg-gradient);
-      background-attachment: fixed;
-      color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      padding: 40px 16px;
-      min-height: 100vh;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
-
-    .app-container {
-      width: 100%;
-      max-width: 620px;
-      background: var(--surface);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-card);
-      padding: 36px;
-      border: 1px solid var(--border-color);
-    }
-
-    .app-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-    }
-
-    .header-title h1 {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-    }
-
-    .header-title p {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn-icon-header {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      width: 40px;
-      height: 40px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-icon-header:hover {
-      border-color: var(--border-focus);
-      color: var(--text-main);
-      transform: scale(1.05);
-    }
-
-    .btn-icon-header.reset-btn:hover {
-      border-color: var(--danger-text);
-      color: var(--danger-text);
-      background: var(--danger-bg);
-    }
-
-    .section {
-      margin-bottom: 28px;
-    }
-
-    .section-label {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .input-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .dynamic-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .input-wrapper {
-      position: relative;
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      min-width: 0;
-    }
-
-    .input-wrapper:focus-within {
-      border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    }
-
-    input, select {
-      width: 100%;
-      height: 42px;
-      border: none;
-      background: transparent;
-      padding: 0 14px;
-      font-size: 14px;
-      color: var(--text-main);
-      outline: none;
-      font-weight: 500;
-      min-width: 0;
-    }
-
-    select option {
-      background-color: #0F172A;
-      color: #F8FAFC;
-    }
-
-    :root:not([data-theme="dark"]) select option {
-      background-color: #FFFFFF;
-      color: #0F172A;
-    }
-
-    .currency-input input {
-      padding-right: 28px;
-    }
-
-    .currency-symbol {
-      position: absolute;
-      right: 12px;
-      color: var(--text-muted);
-      font-size: 14px;
-      pointer-events: none;
-    }
-
-    .flex-grow { flex: 1; min-width: 0; }
-    .w-140 { width: 140px; flex-shrink: 0; }
-    .w-130 { width: 130px; flex-shrink: 0; }
-
-    .transfer-arrow {
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      padding: 0 2px;
-      flex-shrink: 0;
-    }
-
-    .btn {
-      height: 42px;
-      padding: 0 18px;
-      border-radius: var(--radius-md);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      border: none;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-      color: #FFF;
-      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--primary-hover);
-      padding: 0 10px;
-    }
-
-    .btn-ghost:hover {
-      background: var(--primary-light);
-    }
-
-    .btn-sm {
-      height: 36px;
-      font-size: 13px;
-    }
-
-    .btn-lg {
-      height: 48px;
-      font-size: 15px;
-    }
-
-    .full-width { width: 100%; }
-
-    .btn-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .btn-icon.danger:hover {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-    }
-
-    .action-block {
-      margin: 32px 0;
-    }
-
-    .results-section {
-      border-top: 1px solid var(--border-color);
-      padding-top: 28px;
-    }
-
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .metric-card {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      border-radius: var(--radius-md);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 0;
-    }
-
-    .metric-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-
-    .metric-value {
-      font-size: 15px;
-      font-weight: 700;
-      word-break: break-all;
-    }
-
-    .progress-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .progress-bar-bg {
-      flex: 1;
-      height: 8px;
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 4px;
-      transition: width 0.3s ease;
-    }
-
-    .progress-text {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .user-balances {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-
-    .user-balance-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      gap: 12px;
-    }
-
-    .user-name {
-      font-weight: 600;
-      font-size: 14px;
-      word-break: break-word;
-    }
-
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-
-    .badge-danger {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-    }
-
-    .badge-success {
-      background: var(--success-bg);
-      color: var(--success-text);
-    }
-
-    .summary-section {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      padding: 20px;
-      border-radius: var(--radius-md);
-    }
-
-    .summary-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .result-line {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 14px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border-color);
-      word-break: break-word;
-    }
-    .result-line:last-child {
-      border-bottom: none;
-    }
-
-    @media (max-width: 600px) {
-      body {
-        padding: 12px 8px;
-      }
-
-      .app-container {
-        padding: 16px 12px;
-        border-radius: var(--radius-md);
-      }
-
-      .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .input-group {
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .w-140, .w-130 {
-        width: 100%;
-      }
-
-      .flex-grow {
-        width: 100%;
-      }
-
-      .transfer-arrow {
-        display: none;
-      }
-
-      .btn-icon.danger {
-        margin-left: auto;
-      }
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#111019">
+  <meta name="description" content="Удобный расчёт общих расходов и взаиморасчётов между участниками.">
+  <title>Split — разделить счёт</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('split-theme');
+        const theme = saved === 'light' || saved === 'dark'
+          ? saved
+          : (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.dataset.theme = theme;
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body>
-
-  <div class="app-container">
-    <header class="app-header">
-      <div class="header-title">
-        <h1>Разделить счёт</h1>
-        <p>Расчёт общих трат и взаимных взаимозачётов</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-icon-header reset-btn" id="reset-btn" title="Сбросить всё">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Split — на главную">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h12m0 0-3-3m3 3-3 3M20 17H8m0 0 3-3m-3 3 3 3"/></svg></span>
+        <span class="brand-word">split<span>.</span></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="local-status"><span class="status-dot"></span>Данные на этом устройстве</span>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Переключить тему" title="Переключить тему">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg>
         </button>
-        <button class="btn-icon-header" id="theme-toggle-btn" title="Сменить тему">
-          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <button class="icon-button danger-hover" id="reset-btn" type="button" aria-label="Сбросить данные" title="Сбросить данные">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/></svg>
         </button>
       </div>
     </header>
 
-    <main class="app-content">
-      
-      <!-- Целевая сумма -->
-      <section class="section">
-        <h2 class="section-label">Целевая сумма</h2>
-        <div class="input-group">
-          <div class="input-wrapper currency-input flex-grow">
-            <input type="number" id="target" placeholder="0">
-            <span class="currency-symbol">₽</span>
-          </div>
-        </div>
-      </section>
+    <section class="intro">
+      <div class="eyebrow"><span class="eyebrow-line"></span>ОБЩИЕ РАСХОДЫ БЕЗ ПУТАНИЦЫ</div>
+      <h1>Разделить счёт<span class="title-period">.</span></h1>
+      <p>Соберите расходы, учтите переводы и узнайте, кто кому сколько должен.</p>
+    </section>
 
-      <!-- Участники -->
-      <section class="section">
-        <h2 class="section-label">Участники</h2>
-        <div class="dynamic-list" id="people"></div>
-        <button class="btn btn-ghost btn-sm" onclick="addPerson()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    <div class="workspace">
+      <section class="panel input-panel" aria-labelledby="setup-heading">
+        <div class="panel-heading">
+          <div>
+            <span class="step-label">ШАГ 01</span>
+            <h2 id="setup-heading">Настройка расчёта</h2>
+          </div>
+          <span class="heading-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 4v6m10-6v6M4 17h16m-13-3v6m10-6v6"/></svg></span>
+        </div>
+
+        <label class="field-label" for="target">Общая сумма расходов <span class="label-hint">₽</span></label>
+        <div class="money-field target-field">
+          <span class="money-symbol">₽</span>
+          <input id="target" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Например, 12 500" autocomplete="off">
+          <span class="field-caption">Цель</span>
+        </div>
+        <p class="field-help">Если оставить пустым, сумма расходов будет равна сумме внесённых средств.</p>
+
+        <div class="section-divider"></div>
+        <div class="section-title-row">
+          <div>
+            <h3>Участники</h3>
+            <p>Кто участвует и сколько уже внёс</p>
+          </div>
+          <span class="count-pill" id="people-count">2 человека</span>
+        </div>
+        <div id="people-list" class="dynamic-list"></div>
+        <button class="secondary-button" id="add-person" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           Добавить участника
         </button>
-      </section>
 
-      <!-- Переводы -->
-      <section class="section">
-        <h2 class="section-label">Переводы между участниками</h2>
-        <div class="dynamic-list" id="transfers"></div>
-        <button class="btn btn-ghost btn-sm" onclick="addTransfer()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <div class="section-divider"></div>
+        <div class="section-title-row">
+          <div>
+            <h3>Переводы между участниками</h3>
+            <p>Учитывайте деньги, переданные напрямую</p>
+          </div>
+          <span class="count-pill" id="transfers-count">0 переводов</span>
+        </div>
+        <div id="transfers-list" class="dynamic-list"></div>
+        <button class="secondary-button" id="add-transfer" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           Добавить перевод
         </button>
+
+        <div class="panel-footer">
+          <span class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Ничего не отправляется на сервер</span>
+          <button class="text-button" id="clear-results" type="button">Очистить результат</button>
+        </div>
       </section>
 
-      <!-- Кнопка Рассчитать -->
-      <div class="action-block">
-        <button class="btn btn-primary btn-lg full-width" onclick="calculate()">Рассчитать итоги</button>
-      </div>
+      <section class="results-column" aria-labelledby="results-heading">
+        <div class="panel summary-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step-label">ШАГ 02</span>
+              <h2 id="results-heading">Сводка расходов</h2>
+            </div>
+            <span class="live-badge"><span></span>Живой расчёт</span>
+          </div>
 
-      <!-- Результаты -->
-      <section class="section results-section">
-        <h2 class="section-label">Баланс</h2>
-        
-        <div id="summary-metrics">
+          <div class="hero-total">
+            <div>
+              <span class="metric-overline">УЧТЕНО РАСХОДОВ</span>
+              <div class="hero-amount" id="total-paid">0,00 <span>₽</span></div>
+            </div>
+            <div class="hero-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v16H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 7h13M16 12h4"/></svg></div>
+          </div>
+
+          <div class="progress-meta"><span id="progress-label">Заполнено от цели</span><strong id="progress-value">—</strong></div>
+          <div class="progress-track" role="progressbar" aria-label="Выполнение цели" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track"><span id="progress-fill"></span></div>
+
           <div class="metrics-grid">
-            <div class="metric-card">
-              <span class="metric-label">Внесено</span>
-              <span class="metric-value">0.00 ₽</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Цель</span>
-              <span class="metric-value">0.00 ₽</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Недобор</span>
-              <span class="metric-value">0.00 ₽</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Равная доля</span>
-              <span class="metric-value">0.00 ₽</span>
-            </div>
+            <article class="metric-card">
+              <span class="metric-icon purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18m5-13.5c0-1.4-2.2-2.5-5-2.5s-5 1.1-5 2.5S9.2 12 12 12s5 1.1 5 2.5S14.8 17 12 17s-5-1.1-5-2.5"/></svg></span>
+              <span class="metric-label">Целевая сумма</span>
+              <strong id="target-total">0,00 ₽</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon green"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>
+              <span class="metric-label">Средняя доля</span>
+              <strong id="share-total">0,00 ₽</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon orange"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 8l7-5 7 5"/></svg></span>
+              <span class="metric-label" id="gap-label">Осталось собрать</span>
+              <strong id="gap-total">0,00 ₽</strong>
+            </article>
           </div>
-          <div class="progress-container">
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: 0%;"></div>
+          <div class="notice" id="notice" role="status">Добавьте суммы, чтобы увидеть сводку.</div>
+        </div>
+
+        <div class="panel balances-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step-label">ПО УЧАСТНИКАМ</span>
+              <h2>Баланс каждого</h2>
             </div>
-            <span class="progress-text">0%</span>
+            <span class="count-pill" id="balance-count">0 участников</span>
+          </div>
+          <div id="balances-list" class="balance-list">
+            <div class="empty-state"><span class="empty-symbol">↗</span><strong>Пока нет расчёта</strong><p>Добавьте участников и суммы — баланс появится здесь.</p></div>
           </div>
         </div>
 
-        <div class="user-balances" id="balances"></div>
+        <div class="panel settlement-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step-label">ФИНАЛЬНЫЙ ШАГ</span>
+              <h2>Кто кому переводит</h2>
+            </div>
+            <button class="small-action" id="copy-results" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+              Копировать
+            </button>
+          </div>
+          <div id="settlement-list" class="settlement-list">
+            <div class="empty-state compact"><span class="empty-symbol">⇄</span><strong>Здесь появится план переводов</strong><p>Результат обновляется автоматически при изменении данных.</p></div>
+          </div>
+          <div class="settlement-footer" id="settlement-footer">Переводы рассчитываются с точностью до копейки.</div>
+        </div>
       </section>
+    </div>
 
-      <!-- Кто кому должен -->
-      <section class="section summary-section">
-        <h2 class="section-label">Кто кому должен</h2>
-        <div class="summary-list" id="result">
-          <div style="color: var(--text-muted); font-size: 14px;">Нажмите «Рассчитать итоги» для формирования отчёта</div>
-        </div>
-      </section>
+    <footer class="app-footer"><span>split<span class="footer-dot">.</span> <span>Просто и честно делим общие расходы.</span></span><span>Версия 2.0 · Работает локально</span></footer>
+  </main>
 
-    </main>
-  </div>
-
-  <script>
-    // Тема
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const sunIcon = themeToggleBtn.querySelector('.sun-icon');
-    const moonIcon = themeToggleBtn.querySelector('.moon-icon');
-
-    function setTheme(theme) {
-      if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        sunIcon.style.display = 'none';
-        moonIcon.style.display = 'block';
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        sunIcon.style.display = 'block';
-        moonIcon.style.display = 'none';
-      }
-      localStorage.setItem('theme', theme);
-    }
-
-    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
-    }
-
-    themeToggleBtn.addEventListener('click', () => {
-      setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    });
-
-    // Исходные данные
-    let people = [
-      { name: "", paid: 0 },
-      { name: "", paid: 0 }
-    ];
-    let transfers = [];
-
-    const trashIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
-
-    function save() {
-      localStorage.people = JSON.stringify(people);
-      localStorage.transfers = JSON.stringify(transfers);
-      localStorage.target = document.getElementById("target").value;
-      render();
-    }
-
-    function load() {
-      if(localStorage.people) people = JSON.parse(localStorage.people);
-      if(localStorage.transfers) transfers = JSON.parse(localStorage.transfers);
-      if(localStorage.target) document.getElementById("target").value = localStorage.target;
-      render();
-    }
-
-    function addPerson() {
-      people.push({name:"", paid:0});
-      render();
-    }
-
-    function addTransfer() {
-      if(people.length < 2) return;
-      transfers.push({from: 0, to: 1, amount: 0});
-      render();
-    }
-
-    function resetCalculator() {
-      document.getElementById("target").value = "";
-      people = [
-        { name: "", paid: 0 },
-        { name: "", paid: 0 }
-      ];
-      transfers = [];
-      localStorage.removeItem('people');
-      localStorage.removeItem('transfers');
-      localStorage.removeItem('target');
-      render();
-      document.getElementById("balances").innerHTML = "";
-      document.getElementById("summary-metrics").innerHTML = `
-        <div class="metrics-grid">
-          <div class="metric-card"><span class="metric-label">Внесено</span><span class="metric-value">0.00 ₽</span></div>
-          <div class="metric-card"><span class="metric-label">Цель</span><span class="metric-value">0.00 ₽</span></div>
-          <div class="metric-card"><span class="metric-label">Недобор</span><span class="metric-value">0.00 ₽</span></div>
-          <div class="metric-card"><span class="metric-label">Равная доля</span><span class="metric-value">0.00 ₽</span></div>
-        </div>
-        <div class="progress-container">
-          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 0%;"></div></div>
-          <span class="progress-text">0%</span>
-        </div>
-      `;
-      document.getElementById("result").innerHTML = `<div style="color: var(--text-muted); font-size: 14px;">Нажмите «Рассчитать итоги» для формирования отчёта</div>`;
-    }
-
-    document.getElementById('reset-btn').addEventListener('click', resetCalculator);
-
-    function render() {
-      let p = document.getElementById("people");
-      p.innerHTML = "";
-      people.forEach((x, i) => {
-        let div = document.createElement("div");
-        div.className = "input-group";
-        div.innerHTML = `
-          <div class="input-wrapper flex-grow">
-            <input value="${x.name}" placeholder="Имя участника" onchange="people[${i}].name=this.value;save()">
-          </div>
-          <div class="input-wrapper currency-input w-140">
-            <input type="number" value="${x.paid || ''}" placeholder="Внёс" onchange="people[${i}].paid=parseFloat(this.value)||0;save()">
-            <span class="currency-symbol">₽</span>
-          </div>
-          <button class="btn-icon danger" onclick="people.splice(${i},1);save()" title="Удалить">${trashIcon}</button>
-        `;
-        p.appendChild(div);
-      });
-
-      let t = document.getElementById("transfers");
-      t.innerHTML = "";
-      transfers.forEach((x, i) => {
-        let a = "", b = "";
-        people.forEach((pObj, j) => {
-          a += `<option value="${j}" ${j == x.from ? 'selected' : ''}>${pObj.name || "Участник " + (j+1)}</option>`;
-          b += `<option value="${j}" ${j == x.to ? 'selected' : ''}>${pObj.name || "Участник " + (j+1)}</option>`;
-        });
-        let div = document.createElement("div");
-        div.className = "input-group";
-        div.innerHTML = `
-          <div class="input-wrapper flex-grow"><select onchange="transfers[${i}].from=parseInt(this.value);save()">${a}</select></div>
-          <div class="transfer-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
-          <div class="input-wrapper flex-grow"><select onchange="transfers[${i}].to=parseInt(this.value);save()">${b}</select></div>
-          <div class="input-wrapper currency-input w-130">
-            <input type="number" value="${x.amount || ''}" placeholder="Сумма" onchange="transfers[${i}].amount=parseFloat(this.value)||0;save()">
-            <span class="currency-symbol">₽</span>
-          </div>
-          <button class="btn-icon danger" onclick="transfers.splice(${i},1);save()" title="Удалить">${trashIcon}</button>
-        `;
-        t.appendChild(div);
-      });
-    }
-
-    function calculate() {
-      let targetInput = document.getElementById("target");
-      let targetValue = parseFloat(targetInput.value) || 0;
-      let n = people.length;
-      if(!n) return;
-
-      let paid = [], transfersEffect = [], actual = [];
-      let total = 0;
-      people.forEach((p, i) => {
-        paid[i] = p.paid || 0;
-        transfersEffect[i] = 0;
-        actual[i] = p.paid || 0;
-        total += paid[i];
-      });
-
-      transfers.forEach(t => {
-        let a = parseFloat(t.amount) || 0;
-        transfersEffect[t.from] += a;
-        transfersEffect[t.to] -= a;
-        actual[t.from] += a;
-        actual[t.to] -= a;
-      });
-
-      if(!targetValue) targetValue = total;
-      let share = targetValue / n;
-
-      let balances = [];
-      actual.forEach((a, i) => balances[i] = a - share);
-
-      let percent = Math.min(100, targetValue > 0 ? (total / targetValue) * 100 : 0);
-      
-      let metricsHtml = `
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <span class="metric-label">Внесено</span>
-          <span class="metric-value">${total.toFixed(2)} ₽</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Цель</span>
-          <span class="metric-value">${targetValue.toFixed(2)} ₽</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">${targetValue >= total ? "Недобор" : "Излишек"}</span>
-          <span class="metric-value">${Math.abs(targetValue - total).toFixed(2)} ₽</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Равная доля</span>
-          <span class="metric-value">${share.toFixed(2)} ₽</span>
-        </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="reset-dialog" class="confirm-dialog">
+    <form method="dialog">
+      <div class="dialog-mark">↺</div>
+      <h2>Начать заново?</h2>
+      <p>Участники, переводы и суммы будут удалены с этого устройства.</p>
+      <div class="dialog-actions">
+        <button class="secondary-button" value="cancel">Отмена</button>
+        <button class="primary-button" id="confirm-reset" value="confirm">Сбросить данные</button>
       </div>
-      <div class="progress-container">
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width: ${percent}%"></div>
-        </div>
-        <span class="progress-text">${percent.toFixed(0)}%</span>
-      </div>
-      `;
-      document.getElementById("summary-metrics").innerHTML = metricsHtml;
-
-      let peopleHtml = "";
-      people.forEach((p, i) => {
-        let status = balances[i] > 0 ? `получит ${balances[i].toFixed(2)} ₽` : `должен ${Math.abs(balances[i]).toFixed(2)} ₽`;
-        let badgeClass = balances[i] > 0 ? "badge-success" : "badge-danger";
-        if(Math.abs(balances[i]) < 0.01) badgeClass = "";
-        
-        let displayName = p.name.trim() || `Участник ${i + 1}`;
-        peopleHtml += `
-          <div class="user-balance-card">
-            <span class="user-name">${displayName}</span>
-            <span class="badge ${badgeClass}">${status}</span>
-          </div>
-        `;
-      });
-      document.getElementById("balances").innerHTML = peopleHtml;
-
-      let creditors = [], debtors = [], debts = [];
-      balances.forEach((b, i) => { 
-        if(b > 0.005) creditors.push({i, amount: b}); 
-        if(b < -0.005) debtors.push({i, amount: -b}); 
-      });
-
-      while(debtors.length && creditors.length){
-        let d = debtors[0], c = creditors[0];
-        let pay = Math.min(d.amount, c.amount);
-        let fromName = people[d.i].name.trim() || `Участник ${d.i + 1}`;
-        let toName = people[c.i].name.trim() || `Участник ${c.i + 1}`;
-        debts.push(`${fromName} → ${toName}: ${pay.toFixed(2)} ₽`);
-        d.amount -= pay;
-        c.amount -= pay;
-        if(d.amount < 0.01) debtors.shift();
-        if(c.amount < 0.01) creditors.shift();
-      }
-
-      if(targetValue > total){
-        debtors.forEach(d => {
-          let name = people[d.i].name.trim() || `Участник ${d.i + 1}`;
-          debts.push(`${name} должен доложить в кассу: ${d.amount.toFixed(2)} ₽`);
-        });
-      }
-
-      let resultContainer = document.getElementById("result");
-      if(debts.length > 0) {
-        resultContainer.innerHTML = debts.map(d => `<div class="result-line">${d}</div>`).join("");
-      } else {
-        resultContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 14px;">Все участники в полном расчёте!</div>`;
-      }
-    }
-
-    load();
-  </script>
+    </form>
+  </dialog>
+  <script src="script.js" defer></script>
 </body>
 </html>

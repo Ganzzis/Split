@@ -45,7 +45,7 @@
   const shell=SplitShell.create({hasCurrent:()=>!!active,isItems,canNavigate:canLeave,history:home});
   let lastTotal='';
   let toastTimer = null;
-  let lastReport = '';
+  let reportReady = false;
   let drafts = {};
   let recoveryRaw = null;
   let storageBlocked = false;
@@ -334,7 +334,7 @@
       empty.append(el('span', 'empty-symbol', '✓'), el('strong', '', 'Взаиморасчёты не нужны'), el('p', '', 'Все участники находятся в балансе.'));
       els.settlement.append(empty);
       els.settlementFooter.textContent = 'Итог: дополнительные переводы не требуются.';
-      lastReport = `Split — взаиморасчёты\nЦелевая сумма: ${money(result.target)}\nВнесено: ${money(result.totalPaid)}\nПереводы не требуются.`;
+      reportReady = true;
       els.copy.disabled = false;
       return;
     }
@@ -351,13 +351,7 @@
       els.settlement.append(row);
     });
     els.settlementFooter.textContent = `${items.length} ${plural(items.length, 'операция', 'операции', 'операций')} · Суммы рассчитаны в копейках, округление распределено прозрачно.`;
-    lastReport = [
-      'Split — взаиморасчёты',
-      `Целевая сумма: ${money(result.target)}`,
-      `Внесено: ${money(result.totalPaid)}`,
-      '',
-      ...items.map(item => `${item.from} → ${item.to}: ${money(item.amount)}`)
-    ].join('\n');
+    reportReady = true;
     els.copy.disabled = false;
   }
   function calculateAndRender() {
@@ -368,7 +362,7 @@
     renderSettlement(result);
     if (isItems()) {
       const preview=SplitItemsUI.preview(state);
-      if(state.expenseDraft){els.notice.textContent=preview.error || 'Предпросмотр открытого расхода включён в итог. Сначала сохраните расход.';els.notice.dataset.kind='warning';els.copy.disabled=true;lastReport='';}
+      if(state.expenseDraft){els.notice.textContent=preview.error || 'Предпросмотр открытого расхода включён в итог. Сначала сохраните расход.';els.notice.dataset.kind='warning';els.copy.disabled=true;reportReady=false;}
       const proposals=SplitItems.proposals(preview.state);
       proposals.forEach((proposal,index)=>{
         const button=action('Отметить выполненным',()=>{
@@ -380,7 +374,7 @@
     }
     if (Object.keys(drafts).length) {
       els.notice.textContent = 'Исправьте выделенные суммы. Расчёт показан по последним корректным значениям.';
-      els.notice.dataset.kind = 'warning'; els.copy.disabled = true; lastReport = '';
+      els.notice.dataset.kind = 'warning'; els.copy.disabled = true; reportReady = false;
     }
   }
   function renderAll() {
@@ -416,7 +410,7 @@
   function resetAll() {
     drafts = {};
     state = isItems() ? freshItems(DEFAULT_STATE().people) : DEFAULT_STATE();
-    lastReport = '';
+    reportReady = false;
     persist();
     showToast('Создан новый расчёт.');
   }
@@ -428,7 +422,7 @@
     const empty2 = el('div', 'empty-state compact');
     empty2.append(el('span', 'empty-symbol', '⇄'), el('strong', '', 'Здесь появится план переводов'), el('p', '', 'Результат пересчитывается автоматически.'));
     els.balances.append(empty1); els.settlement.append(empty2);
-    els.copy.disabled = true; lastReport = '';
+    els.copy.disabled = true; reportReady = false;
     showToast('Отображение результата очищено. Данные сохранены.');
   }
   function setTheme(theme, save = true) {
@@ -460,20 +454,10 @@
   $('#clear-results').addEventListener('click', clearResults);
   els.target.parentElement.after(bindMoney(els.target,'target','',raw => { state.target = raw; }));
   els.copy.addEventListener('click', async () => {
-    if (!lastReport) return;
-    try {
-      await navigator.clipboard.writeText(lastReport);
-      showToast('Итоги скопированы в буфер обмена.');
-    } catch (_) {
-      const area = document.createElement('textarea');
-      area.value = lastReport;
-      area.style.position = 'fixed'; area.style.opacity = '0';
-      document.body.append(area); area.select();
-      let ok = false;
-      try { ok = document.execCommand('copy'); } catch (_) {}
-      area.remove(); els.copy.focus();
-      showToast(ok ? 'Итоги скопированы.' : 'Не удалось скопировать. Выделите текст вручную.');
-    }
+    if (!reportReady || !active) return;
+    const report=SplitReports.text(SplitReports.build(currentRecord(),{unsaved:saveFailed||storageBlocked}));
+    const ok=await SplitShareUI.copyText(report);
+    els.copy.focus();showToast(ok?'Итоги скопированы.':'Не удалось скопировать. Откройте «Поделиться» для ручного копирования.');
   });
 
   function download(raw, filename) {
@@ -614,6 +598,7 @@
   window.addEventListener('beforeunload',event => {
     if (saveFailed || storageBlocked) { event.preventDefault(); event.returnValue = ''; }
   });
+  SplitShareUI.create({record:currentRecord,unsaved:()=>saveFailed||storageBlocked,toast:showToast});
   safeLoad();
   // Preserve the original theme preference key during migration.
   try {

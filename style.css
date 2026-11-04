@@ -175,3 +175,10 @@ body.keyboard-open .mobile-dock {visibility:hidden;pointer-events:none;}
 /* A failed write stays visible next to the recovery action on every screen. */
 .data-bar:has([data-error=true]) {position:fixed;z-index:40;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(600px,calc(100% - 24px));padding:14px 16px;border:1px solid var(--red);border-radius:18px;background:var(--surface-strong);box-shadow:var(--shadow);flex-wrap:nowrap;gap:12px;}
 .data-bar:has([data-error=true]) >span {flex:1;min-width:0;line-height:1.6;overflow-wrap:anywhere;}.data-bar:has([data-error=true]) >button {flex-shrink:0;}
+
+.share-toolbar {grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:12px;}.share-toolbar >span {font-size:12px;color:var(--muted);}
+.share-dialog {width:min(620px,calc(100% - 32px));}.share-dialog .sheet-heading h2 {font-size:20px;margin:0;}.share-dialog #share-status {font-size:12px;margin-block:14px;}.share-dialog .notice {color:var(--orange);background:var(--orange-soft);margin-bottom:14px;}
+.share-image {display:block;width:100%;height:auto;max-height:45dvh;object-fit:contain;border-radius:16px;background:var(--input);margin:14px 0;}
+.share-buttons {display:flex;flex-wrap:wrap;gap:9px;margin-top:10px;}.share-buttons >* {flex:1 1 180px;min-height:46px;text-align:center;}
+.share-text-details {margin-top:18px;}.share-text-details summary {display:flex;align-items:center;font-size:14px;color:var(--accent);cursor:pointer;}.share-dialog textarea {width:100%;min-height:180px;resize:vertical;font-size:16px;line-height:1.6;color:var(--text);background:var(--input);border:1px solid var(--border-strong);border-radius:14px;padding:12px;margin-top:8px;}.share-dialog select {margin-top:7px;}
+@media(max-width:700px){.share-dialog {width:100%;}.share-image {max-height:35dvh;}.share-buttons >* {flex-basis:140px;}.share-dialog .sheet-heading {align-items:flex-start;}}

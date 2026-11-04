@@ -155,6 +155,7 @@
     <button type="button" class="primary-button results-shortcut" data-view="results">Посмотреть итоги <span aria-hidden="true">↗</span></button>
     </div>
       <section id="results" class="results-column" aria-labelledby="results-heading">
+        <div class="share-toolbar"><span>Готово к отправке</span><button id="share-results" class="primary-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M6 11H4v10h16V11h-2"/></svg>Поделиться</button></div>
         <div class="panel summary-panel">
           <div class="panel-heading">
             <div>
@@ -278,11 +279,23 @@
   </dialog>
   <dialog id="mode-dialog" class="confirm-dialog" aria-labelledby="mode-title"><h2 id="mode-title">Сменить режим?</h2><p>Текущий расчёт со всеми данными и черновиками будет сохранён отдельной копией в истории. В этом расчёте останутся только имена участников: расходы, суммы и переводы начнутся с нуля. Автоматического преобразования взносов в позиции нет.</p><div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Отмена</button><button id="confirm-mode" class="primary-button" type="button">Сохранить копию и сменить</button></div></dialog>
   <dialog id="ui-confirm-dialog" class="confirm-dialog" aria-labelledby="ui-confirm-title" aria-describedby="ui-confirm-description"><form method="dialog"><h2 id="ui-confirm-title"></h2><p id="ui-confirm-description"></p><div class="dialog-actions"><button class="secondary-button" value="cancel" autofocus>Отмена</button><button id="ui-confirm-accept" class="primary-button" value="confirm">Подтвердить</button></div></form></dialog>
+  <dialog id="share-dialog" class="confirm-dialog share-dialog" aria-labelledby="share-title" aria-describedby="share-status">
+    <div class="sheet-heading"><h2 id="share-title">Поделиться результатом</h2><button class="text-button" type="button" data-close-dialog aria-label="Закрыть обмен">Закрыть</button></div>
+    <p id="share-warning" class="notice" role="alert" hidden></p>
+    <p id="share-status" role="status"></p>
+    <label id="share-pages" hidden>Страница PNG<select id="share-page"></select></label>
+    <img id="share-image" class="share-image" alt="Карточка результата" hidden>
+    <div class="share-buttons"><button id="share-system" class="primary-button" type="button" disabled>Отправить через систему</button><button id="share-copy" class="secondary-button" type="button">Копировать текст</button></div>
+    <div id="share-png-actions" class="share-buttons" hidden><a id="share-download-png" class="secondary-button">Скачать PNG</a><a id="share-open-png" class="secondary-button" target="_blank" rel="noopener">Открыть PNG в браузере</a></div>
+    <details class="share-text-details"><summary>Текст отчёта</summary><label for="share-text">Отчёт для мессенджера</label><textarea id="share-text" readonly rows="9"></textarea><button id="share-download-text" class="text-button" type="button">Сохранить TXT</button></details>
+  </dialog>
   <script src="core.js" defer></script>
   <script src="items-core.js" defer></script>
   <script src="history.js" defer></script>
   <script src="items-ui.js" defer></script>
   <script src="ui-shell.js" defer></script>
+  <script src="reports.js" defer></script>
+  <script src="share-ui.js" defer></script>
   <script src="script.js" defer></script>
   <script src="pwa.js" defer></script>
 </body>

@@ -13,6 +13,7 @@
     return {state:result,error};
   }
   function create(api){
+    let collapsed=false;
     const name=id=>{const s=api.get(),index=s.people.findIndex(p=>p.id===id);return s.people[index]?.name || `Участник ${index+1}`;};
     function change(render=false){api.save();if(render)renderAll();else validateDraft();api.recalculate();}
     function editable(){if(api.get().expenseDraft){api.toast('Сначала сохраните или отмените открытый расход.');return false;}return true;}
@@ -39,16 +40,16 @@
       }
     }
     function renderDraft(){
-      const s=api.get(),draft=s.expenseDraft;$('expense-editor').hidden=!draft;$('add-expense').disabled=!!draft;if(!draft)return;
+      const s=api.get(),draft=s.expenseDraft;$('expense-editor').hidden=!draft||collapsed;$('resume-expense').hidden=!draft||!collapsed;$('items-panel').dataset.editing=String(!!draft&&!collapsed);$('add-expense').disabled=!!draft;if(!draft){collapsed=false;return;}
       for(const [id,key] of [['expense-title','title'],['expense-amount','amount']]){const input=$(id);input.value=draft[key];input.oninput=()=>{draft[key]=input.value;change();};}
       select('expense-payer',draft.payerId,value=>{draft.payerId=value;change();});
       $('expense-split').value=draft.split;$('expense-split').onchange=()=>{draft.split=$('expense-split').value;change(true);};shares();validateDraft();
     }
     function renderPayments(){
       const s=api.get(),list=$('payments-list');list.replaceChildren();
-      for(const payment of s.payments){const row=node('div','expense-card');row.append(node('p','',`${name(payment.fromId)} → ${name(payment.toId)} · ${api.money(SplitItems.cents(payment.amount))}`),button('Удалить перевод',()=>{
-        if(!confirm('Отменить выполненную компенсацию? Она снова отразится в долге.'))return;
-        s.payments=s.payments.filter(p=>p.id!==payment.id);change(true);
+      for(const payment of s.payments){const row=node('div','expense-card');row.append(node('p','',`${name(payment.fromId)} → ${name(payment.toId)} · ${api.money(SplitItems.cents(payment.amount))}`),button('Удалить перевод',async()=>{
+        if(!await SplitShell.confirm({title:'Отменить компенсацию?',description:'Выполненный перевод будет удалён из расчёта и снова отразится в долге.',confirmLabel:'Удалить перевод'}))return;
+        s.payments=s.payments.filter(p=>p.id!==payment.id);change(true);$('payment-from').focus({preventScroll:true});
       }));list.append(row);}
       const draft=s.paymentDraft || {fromId:s.people[0].id,toId:s.people[Math.min(1,s.people.length-1)].id,amount:''};
       const update=()=>{s.paymentDraft=draft;change();};
@@ -58,19 +59,21 @@
     function renderAll(){
       const s=api.get();if(s.mode!=='items')return;
       const list=$('expenses-list');list.replaceChildren();$('expenses-empty').hidden=s.expenses.length>0;
-      for(const expense of s.expenses){const card=node('article','expense-card');card.append(node('h3','',expense.title),node('p','',`${api.money(SplitItems.cents(expense.amount))} · Оплатил: ${name(expense.payerId)} · ${expense.shares.length} участн.`));
-        const actions=node('div','history-actions');actions.append(button('Изменить расход',()=>{if(!editable())return;s.expenseDraft=structuredClone(expense);change(true);$('expense-title').focus();}),
+      for(const expense of s.expenses){const card=node('article','expense-card');card.append(node('h3','',expense.title),node('div','expense-amount',api.money(SplitItems.cents(expense.amount))),node('p','',`Оплатил: ${name(expense.payerId)} · ${expense.shares.length} участн.`));
+        const actions=node('div','history-actions');actions.append(button('Изменить расход',()=>{if(!editable())return;collapsed=false;s.expenseDraft=structuredClone(expense);change(true);$('expense-title').focus();}),
           button('Копировать расход',()=>{if(!editable())return;if(s.expenses.length>=500){api.toast('Не более 500 расходов.');return;}s.expenses.push({...structuredClone(expense),id:api.uid()});change(true);}),
-          button('Удалить расход',()=>{if(!editable()||!confirm('Удалить расход? Балансы будут пересчитаны.'))return;s.expenses=s.expenses.filter(e=>e.id!==expense.id);change(true);}));card.append(actions);list.append(card);
+          button('Удалить расход',async()=>{if(!editable()||!await SplitShell.confirm({title:'Удалить расход?',description:'Балансы будут пересчитаны. Остальные расходы сохранятся.',confirmLabel:'Удалить расход'}))return;s.expenses=s.expenses.filter(e=>e.id!==expense.id);api.save();api.recalculate();await SplitShell.exit(card);renderAll();$('add-expense').focus({preventScroll:true});}));SplitShell.compactActions(actions,[null,'⧉','×']);card.append(actions);list.append(card);if(list.children.length<=6)SplitShell.enter(card);
       }
       renderDraft();renderPayments();
     }
-    $('add-expense').onclick=()=>{const s=api.get();if(!editable())return;if(s.expenses.length>=500){api.toast('Не более 500 расходов.');return;}s.expenseDraft={id:api.uid(),title:'',amount:'',payerId:s.people[0].id,split:'equal',shares:s.people.map(p=>({personId:p.id,value:''}))};change(true);$('expense-title').focus();};
-    $('expense-form').onsubmit=event=>{event.preventDefault();const s=api.get(),draft=s.expenseDraft;if(!draft)return;try{SplitItems.allocate(draft,s.people);if(s.expenses.length>=500&&!s.expenses.some(e=>e.id===draft.id))throw Error('Не более 500 расходов.');const index=s.expenses.findIndex(e=>e.id===draft.id);if(index<0)s.expenses.push(draft);else s.expenses[index]=draft;delete s.expenseDraft;change(true);}catch(e){api.toast(e.message);}};
-    $('cancel-expense').onclick=()=>{if(!confirm('Отменить изменения открытого расхода? Несохранённый черновик будет удалён.'))return;delete api.get().expenseDraft;change(true);};
+    $('add-expense').onclick=()=>{const s=api.get();if(!editable())return;if(s.expenses.length>=500){api.toast('Не более 500 расходов.');return;}collapsed=false;s.expenseDraft={id:api.uid(),title:'',amount:'',payerId:s.people[0].id,split:'equal',shares:s.people.map(p=>({personId:p.id,value:''}))};change(true);$('expense-title').focus();};
+    $('expense-form').onsubmit=event=>{event.preventDefault();const s=api.get(),draft=s.expenseDraft;if(!draft)return;try{SplitItems.allocate(draft,s.people);if(s.expenses.length>=500&&!s.expenses.some(e=>e.id===draft.id))throw Error('Не более 500 расходов.');const index=s.expenses.findIndex(e=>e.id===draft.id);if(index<0)s.expenses.push(draft);else s.expenses[index]=draft;delete s.expenseDraft;change(true);$('add-expense').focus({preventScroll:true});}catch(e){api.toast(e.message);}};
+    $('cancel-expense').onclick=async()=>{if(!await SplitShell.confirm({title:'Удалить черновик?',description:'Несохранённые изменения открытого расхода будут удалены. Сохранённая версия расхода останется.',confirmLabel:'Удалить черновик'}))return;delete api.get().expenseDraft;change(true);$('add-expense').focus({preventScroll:true});};
     $('payment-form').onsubmit=event=>{event.preventDefault();const s=api.get();try{if(s.expenseDraft)throw Error('Сначала сохраните или отмените расход.');const d=s.paymentDraft;if(!d)throw Error('Введите сумму перевода.');const next=structuredClone(s);next.payments.push({id:api.uid(),...d});delete next.paymentDraft;SplitItems.validate(next);api.replace(next);$('payment-error').textContent='';}catch(e){$('payment-error').textContent=e.message;}};
     $('cancel-payment').onclick=()=>{delete api.get().paymentDraft;change(true);$('payment-error').textContent='';};
-    return {render:renderAll};
+    $('close-expense-editor').onclick=()=>{collapsed=true;renderAll();$('resume-expense').focus({preventScroll:true});};
+    $('resume-expense').onclick=()=>{collapsed=false;renderAll();$('expense-title').focus();};
+    return {render:renderAll,reopen:()=>{collapsed=false;}};
   }
   root.SplitItemsUI={create,preview};
 })(globalThis);

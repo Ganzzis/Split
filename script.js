@@ -42,6 +42,8 @@
   const isItems = () => state.mode === 'items';
   let state = DEFAULT_STATE();
   const itemsUI = SplitItemsUI.create({get:()=>state,save:()=>persist(false),recalculate:()=>calculateAndRender(),money,uid,toast:showToast,replace:next=>{state=next;drafts={};persist();}});
+  const shell=SplitShell.create({hasCurrent:()=>!!active,isItems,canNavigate:canLeave,history:home});
+  let lastTotal='';
   let toastTimer = null;
   let lastReport = '';
   let drafts = {};
@@ -88,6 +90,7 @@
     return active ? {...active,state:{...state,drafts}} : null;
   }
   function storageError(error) {
+    SplitShell.feedback('error');
     saveFailed = true; storageBlocked = history.blocked;
     storageStatus(error.message + ' Скачайте копию до закрытия страницы.',true);
   }
@@ -226,7 +229,7 @@
     return select;
   }
   function removePerson(index) {
-    if (isItems()) {try {state=SplitItems.removePerson(state,state.people[index].id);persist();}catch(e){showToast(e.message);}return;}
+    if (isItems()) {try {state=SplitItems.removePerson(state,state.people[index].id);persist();els.people.children[Math.min(index,state.people.length-1)]?.querySelector('input')?.focus();}catch(e){showToast(e.message);}return;}
     if (state.people.length <= 1) {
       showToast('В расчёте должен остаться хотя бы один участник.');
       return;
@@ -360,6 +363,7 @@
   function calculateAndRender() {
     const result = calculate();
     renderMetrics(result);
+    const totalSignature=String(result.totalPaid);if(lastTotal!==totalSignature && shell.view==='results')SplitShell.pulse(els.totalPaid);lastTotal=totalSignature;
     renderBalances(result);
     renderSettlement(result);
     if (isItems()) {
@@ -369,7 +373,7 @@
       proposals.forEach((proposal,index)=>{
         const button=action('Отметить выполненным',()=>{
           if(!canLeave())return;
-          try{state=SplitItems.complete(state,proposal.operationId,uid());persist();}catch(e){showToast(e.message);}
+          try{state=SplitItems.complete(state,proposal.operationId,uid());persist();$('#results-heading').focus({preventScroll:true});showToast('Компенсация отмечена выполненной.');}catch(e){showToast(e.message);}
         });button.disabled=!!state.expenseDraft;
         els.settlement.children[index]?.append(button);
       });
@@ -382,12 +386,10 @@
   function renderAll() {
     $('#editor-screen').dataset.mode=isItems()?'items':'simple';
     $('#participants-help').textContent=isItems()?'Кто участвует в расходах':'Кто участвует и сколько уже внёс';
-    const dock=$('.mobile-dock a');dock.href=isItems()?'#items-heading':'#setup-heading';dock.textContent=isItems()?'Расходы':'Настройка';
-    $('.skip-link').textContent=active?'Перейти к расчёту':'Перейти к истории';
     $('.progress-meta').hidden=isItems();els.progressTrack.hidden=isItems();
     $('#target-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Всего по позициям':'Целевая сумма';
     $('#share-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Доли участников':'Доля каждого';
-    $('#items-panel').hidden=!isItems();$('#simple-target').hidden=isItems();$('#simple-transfers').hidden=isItems();
+    $('#simple-target').hidden=isItems();$('#simple-transfers').hidden=isItems();
     $('#editor-title').dataset.mode=isItems()?'По позициям':'Простой';
     itemsUI.render();
     els.target.value = Object.hasOwn(drafts,'target') ? drafts.target : state.target;
@@ -395,6 +397,7 @@
     renderPeople();
     renderTransfers();
     calculateAndRender();
+    shell.sync();
   }
   function addPerson() {
     if (state.people.length >= 100) { showToast('Можно добавить не более 100 участников.'); return; }
@@ -514,7 +517,11 @@
           $('#delete-name').textContent = item.name;
           $('#delete-dialog').dataset.recordId = item.id; $('#delete-dialog').showModal();
         }));
-      card.append(title,el('p','mode-badge',item.state.mode==='items'?'По позициям':'Простой'),date,buttons); list.append(card);
+      const summary=item.state.mode==='items'?SplitItems.calculate(item.state):SplitCore.calculate(item.state);
+      SplitShell.compactActions(buttons,[null,'✎','⧉','↓','×']);
+      card.dataset.recordId=item.id;
+      card.append(title,el('p','mode-badge',item.state.mode==='items'?'По позициям':'Простой'),el('div','history-card-sum',money(summary.totalPaid)),el('p','history-card-meta',`${item.state.people.length} ${plural(item.state.people.length,'участник','участника','участников')}`),date,buttons); list.append(card);
+      if(list.children.length<=6)SplitShell.enter(card);
     }
   }
   function canLeave() {
@@ -523,16 +530,14 @@
   }
   function home() {
     if (!canLeave()) return;
-    active = null; $('.skip-link').textContent='Перейти к истории'; $('#home-screen').hidden = false; $('#editor-screen').hidden = true;
-    $('#reset-btn').hidden = true; $('.mobile-dock').hidden = true; $('.skip-link').href = '#history-heading'; renderHistory(); $('#history-heading').focus();
+    renderHistory(); shell.show('history');
   }
   function openRecord(id) {
     if (!canLeave()) return;
     const item = history.list().find(r => r.id === id); if (!item) return;
     active = item; state = SplitHistory.clone(item.state); drafts = state.drafts || {}; delete state.drafts;
     $('#editor-title').textContent = item.name;
-    $('#home-screen').hidden = true; $('#editor-screen').hidden = false; $('#reset-btn').hidden = false; $('.mobile-dock').hidden = false;
-    $('.skip-link').href = '#setup-heading'; renderAll(); $('#setup-heading').focus();
+    itemsUI.reopen();shell.resetSection();renderAll();shell.show('calculation');
   }
   function renameRecord(item) {
     if (!canLeave()) return;
@@ -549,7 +554,11 @@
   });
   $('#confirm-delete').addEventListener('click',() => {
     if (!canLeave()) return;
-    try { history.remove($('#delete-dialog').dataset.recordId); $('#delete-dialog').close(); renderHistory(); storageStatus('Расчёт удалён'); }
+    try {
+      const id=$('#delete-dialog').dataset.recordId;history.remove(id);if(active?.id===id)active=null;
+      $('#delete-dialog').close();shell.sync();storageStatus('Расчёт удалён');
+      const card=$('#history-list').querySelector(`[data-record-id="${id}"]`);SplitShell.exit(card).then(()=>{renderHistory();$('#history-heading').focus({preventScroll:true});});
+    }
     catch (e) { storageError(e); }
   });
   $('#create-calculation').addEventListener('click',() => {
@@ -614,6 +623,6 @@
     else setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
   } catch (_) {}
   renderAll();
-  $('#reset-btn').hidden = true; $('.mobile-dock').hidden = true;
-  renderHistory();
+  SplitShell.compactActions($('.editor-navigation'),[null,'⇄','✎','↓']);
+  renderHistory();shell.sync();
 })();

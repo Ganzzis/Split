@@ -1,15 +1,15 @@
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'/tmp/split-test-tools/node_modules/playwright-core');const A=require('node:assert/strict'),fs=require('node:fs/promises');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'/tmp/split-test-tools/node_modules/playwright-core');const {go,people,expenses}=require('./ui-helpers.cjs');const A=require('node:assert/strict'),fs=require('node:fs/promises');
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});let count=0;const check=async(name,fn)=>{await fn();console.log('PASS:',name);count++;};
 try{
 const ctx=await browser.newContext({viewport:{width:390,height:844}}),p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());await p.goto(process.env.SPLIT_URL||'http://127.0.0.1:8000/');
 const record=()=>p.evaluate(()=>JSON.parse(localStorage.getItem('split-history-v4')).records[0]);
 const open=()=>p.getByRole('button',{name:'Открыть',exact:true}).first().click();
-const form=async(title,amount)=>{await p.locator('#add-expense').click();await p.locator('#expense-title').fill(title);await p.locator('#expense-amount').fill(amount);};
+const form=async(title,amount)=>{await expenses(p);await p.locator('#add-expense').click();await p.locator('#expense-title').fill(title);await p.locator('#expense-amount').fill(amount);};
 let backup;
 await check('create items mode; participants; equal split and immediate preview',async()=>{
  await p.locator('#new-mode').selectOption('items');await p.locator('#create-calculation').click();A.equal((await record()).state.mode,'items');
- await p.locator('#add-person').click();for(const [i,name]of ['Анна','Борис','Вера'].entries())await p.locator('.person-name').nth(i).fill(name);
- A.ok(await p.locator('#simple-target').isHidden());A.equal(await p.locator('.person-paid:visible').count(),0);
+ await people(p);await p.locator('#add-person').click();for(const [i,name]of ['Анна','Борис','Вера'].entries())await p.locator('.person-name').nth(i).fill(name);
+ await expenses(p);A.ok(await p.locator('#simple-target').isHidden());A.equal(await p.locator('.person-paid:visible').count(),0);
  await form('Ужин','10,01');A.match(await p.locator('#total-paid').innerText(),/10,01/);await p.locator('#save-expense').click();A.equal((await record()).state.expenses.length,1);
  A.match(await p.locator('#balances-list').innerText(),/6,67/);A.match(await p.locator('#balances-list').innerText(),/3,34/);
 });
@@ -30,15 +30,15 @@ await check('percent sum requires 100; copy/edit/delete expenses',async()=>{
  A.ok(await p.locator('#save-expense').isDisabled());await p.getByRole('textbox',{name:'Процент: Вера',exact:true}).fill('33.34');await p.locator('#save-expense').click();
  await p.getByRole('button',{name:'Копировать расход',exact:true}).last().click();A.equal((await record()).state.expenses.length,5);
  await p.getByRole('button',{name:'Изменить расход',exact:true}).last().click();await p.locator('#expense-title').fill('Копия покупок');await p.locator('#save-expense').click();
- await p.getByRole('button',{name:'Удалить расход',exact:true}).last().click();A.equal((await record()).state.expenses.length,4);
+ await p.getByRole('button',{name:'Удалить расход',exact:true}).last().click();await p.locator('#ui-confirm-accept').click();await p.waitForFunction(()=>JSON.parse(localStorage.getItem('split-history-v4')).records[0].state.expenses.length===4);A.equal((await record()).state.expenses.length,4);
 });
 await check('linked participant cannot be deleted; unlinked participant can',async()=>{
- await p.locator('.person-row').first().getByRole('button',{name:'Удалить участника'}).click();A.equal((await record()).state.people.length,3);
+ await people(p);await p.locator('.person-row').first().getByRole('button',{name:'Удалить участника'}).click();A.equal((await record()).state.people.length,3);
  await p.locator('#add-person').click();A.equal((await record()).state.people.length,4);await p.locator('.person-row').last().getByRole('button',{name:'Удалить участника'}).click();A.equal((await record()).state.people.length,3);
 });
 await check('manual payment draft survives reload; repeated proposal is not conducted twice',async()=>{
- await p.locator('#payments-section summary').click();const ids=(await record()).state.people.map(x=>x.id);await p.locator('#payment-from').selectOption(ids[1]);await p.locator('#payment-to').selectOption(ids[0]);await p.locator('#payment-amount').fill('-3');
- await p.reload();await open();await p.locator('#payments-section summary').click();A.equal(await p.locator('#payment-amount').inputValue(),'-3');
+ await go(p,'results');await p.locator('#payments-section summary').click();const ids=(await record()).state.people.map(x=>x.id);await p.locator('#payment-from').selectOption(ids[1]);await p.locator('#payment-to').selectOption(ids[0]);await p.locator('#payment-amount').fill('-3');
+ await p.reload();await open();await go(p,'results');await p.locator('#payments-section summary').click();A.equal(await p.locator('#payment-amount').inputValue(),'-3');
  await p.locator('#payment-form button[type=submit]').click();A.equal((await record()).state.payments.length,0);await p.locator('#payment-amount').fill('0.01');await p.locator('#payment-form button[type=submit]').click();A.equal((await record()).state.payments.length,1);
  const button=p.getByRole('button',{name:'Отметить выполненным',exact:true}).first();await button.evaluate(b=>{b.click();b.click();});A.equal((await record()).state.payments.length,2);
  const dl=await Promise.all([p.waitForEvent('download'),p.locator('#export-current').click()]);backup=JSON.parse(await fs.readFile(await dl[0].path(),'utf8'));A.equal(backup.version,5);
@@ -52,8 +52,8 @@ await check('mode switch confirmation keeps an exact original copy, reload and i
 await check('mobile widths and both themes; offline item editor reload',async()=>{
  const card=p.locator('#history-list article').filter({has:p.locator('.mode-badge',{hasText:'По позициям'})}).first();await card.getByRole('button',{name:'Открыть',exact:true}).click();
  await p.locator('#add-expense').click();await p.locator('#expense-split').selectOption('percent');
- for(const width of [320,375,390,412,768,1280])for(const theme of ['dark','light']){await p.setViewportSize({width,height:844});await p.evaluate(t=>document.documentElement.dataset.theme=t,theme);A.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));A.ok(await p.locator('.person-name').first().evaluate(n=>n.getBoundingClientRect().width>=120));}
- await p.locator('#cancel-expense').click();await p.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}));});
+ for(const width of [320,375,390,412,768,1280])for(const theme of ['dark','light']){await p.setViewportSize({width,height:844});await p.evaluate(t=>document.documentElement.dataset.theme=t,theme);A.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));A.ok(await p.locator('#expense-title').evaluate(n=>n.getBoundingClientRect().width>=120));}
+ await p.locator('#cancel-expense').click();await p.locator('#ui-confirm-accept').click();await p.waitForFunction(()=>!document.querySelector('#expense-editor').getClientRects().length);await p.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}));});
  await ctx.setOffline(true);await p.reload();await p.locator('#history-list article').filter({has:p.locator('.mode-badge',{hasText:'По позициям'})}).first().getByRole('button',{name:'Открыть',exact:true}).click();A.ok(await p.locator('#items-panel').isVisible());A.ok((await record()).state);await ctx.setOffline(false);
 });
 A.deepEqual(errors,[]);await ctx.close();

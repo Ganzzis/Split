@@ -1,47 +1,31 @@
-// sw.js
-const CACHE_NAME = 'split-app-v1';
-const urlsToCache = [
-  './index.html',  // или './SPLIT.html' если не переименовал
-  // Добавь сюда любые внешние ресурсы, если появятся (пока всё inline)
-];
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-  );
+'use strict';
+// Increment on every application-shell release.
+const CACHE_PREFIX = 'split-shell-';
+const CACHE_NAME = `${CACHE_PREFIX}v3.0.0`;
+const SHELL = ['./','./index.html','./style.css','./core.js','./script.js','./pwa.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','./icons/apple-touch-icon.png'];
+const shellURLs = new Set(SHELL.map(path => new URL(path,self.location).href));
+self.addEventListener('install',event => {
+ event.waitUntil((async () => {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.addAll(SHELL.map(path => new Request(new URL(path,self.location),{cache:'reload'})));
+ })());
 });
-
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit — return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).catch(() => {
-          // Если сеть упала — верни из кэша (fallback на index)
-          return caches.match('./index.html');
-        });
-      })
-  );
+self.addEventListener('message',event => { if (event.data?.type === 'SKIP_WAITING') event.waitUntil(self.skipWaiting()); });
+self.addEventListener('activate',event => {
+ event.waitUntil((async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)));
+  await caches.delete('split-app-v1');
+  await self.clients.claim();
+ })());
 });
-
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
+self.addEventListener('fetch',event => {
+ const request = event.request, url = new URL(request.url);
+ if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+ if (request.mode !== 'navigate' && !shellURLs.has(url.href)) return;
+ event.respondWith((async () => {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request.mode === 'navigate' ? new URL('./index.html',self.location).href : request);
+  return cached || fetch(request);
+ })());
 });

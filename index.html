@@ -2,11 +2,17 @@
 <html lang="ru" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-w3r0OsbrcLySmUhFKSw76rVJXybBKXLF+gZl1jbHD1s='; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#111019">
+  <meta name="theme-color" content="#111216">
   <meta name="description" content="Удобный расчёт общих расходов и взаиморасчётов между участниками.">
   <title>Split — разделить счёт</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
   <script>
     (() => {
@@ -21,6 +27,8 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#setup-heading">Перейти к расчёту</a>
+  <noscript><p class="notice">Для расчётов включите JavaScript. Данные остаются на устройстве.</p></noscript>
   <div class="ambient ambient-one" aria-hidden="true"></div>
   <div class="ambient ambient-two" aria-hidden="true"></div>
   <main class="app-shell">
@@ -52,7 +60,7 @@
         <div class="panel-heading">
           <div>
             <span class="step-label">ШАГ 01</span>
-            <h2 id="setup-heading">Настройка расчёта</h2>
+            <h2 id="setup-heading" tabindex="-1">Настройка расчёта</h2>
           </div>
           <span class="heading-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 4v6m10-6v6M4 17h16m-13-3v6m10-6v6"/></svg></span>
         </div>
@@ -60,7 +68,7 @@
         <label class="field-label" for="target">Общая сумма расходов <span class="label-hint">₽</span></label>
         <div class="money-field target-field">
           <span class="money-symbol">₽</span>
-          <input id="target" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Например, 12 500" autocomplete="off">
+          <input id="target" type="text" inputmode="decimal" placeholder="Например, 12 500" autocomplete="off">
           <span class="field-caption">Цель</span>
         </div>
         <p class="field-help">Если оставить пустым, сумма расходов будет равна сумме внесённых средств.</p>
@@ -83,7 +91,7 @@
         <div class="section-title-row">
           <div>
             <h3>Переводы между участниками</h3>
-            <p>Учитывайте деньги, переданные напрямую</p>
+            <p>Уже выполненные компенсации: кто отправил деньги и кому</p>
           </div>
           <span class="count-pill" id="transfers-count">0 переводов</span>
         </div>
@@ -99,7 +107,7 @@
         </div>
       </section>
 
-      <section class="results-column" aria-labelledby="results-heading">
+      <section id="results" class="results-column" aria-labelledby="results-heading">
         <div class="panel summary-panel">
           <div class="panel-heading">
             <div>
@@ -128,7 +136,7 @@
             </article>
             <article class="metric-card">
               <span class="metric-icon green"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>
-              <span class="metric-label">Средняя доля</span>
+              <span class="metric-label">Доля каждого</span>
               <strong id="share-total">0,00 ₽</strong>
             </article>
             <article class="metric-card">
@@ -172,21 +180,29 @@
       </section>
     </div>
 
-    <footer class="app-footer"><span>split<span class="footer-dot">.</span> <span>Просто и честно делим общие расходы.</span></span><span>Версия 2.0 · Работает локально</span></footer>
+    <footer class="app-footer"><span>split<span class="footer-dot">.</span> <span>Просто и честно делим общие расходы.</span></span><span>Версия 3.0 · Работает локально</span></footer>
   </main>
 
+  <div class="data-bar" aria-label="Состояние данных">
+    <span id="storage-status" role="status">Данные на этом устройстве</span>
+    <button id="backup-btn" class="text-button" type="button">Скачать копию</button>
+  </div>
+  <nav class="mobile-dock" aria-label="Быстрая навигация"><a href="#setup-heading">Настройка</a><a href="#results">Итог и переводы ↗</a></nav>
+  <div class="update-banner" id="update-banner" hidden role="status"><span>Новая версия готова. Данные сохранятся.</span><button class="secondary-button" id="update-btn" type="button">Обновить</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <dialog id="reset-dialog" class="confirm-dialog">
+  <dialog aria-labelledby="reset-title" aria-describedby="reset-description" id="reset-dialog" class="confirm-dialog">
     <form method="dialog">
       <div class="dialog-mark">↺</div>
-      <h2>Начать заново?</h2>
-      <p>Участники, переводы и суммы будут удалены с этого устройства.</p>
+      <h2 id="reset-title">Начать заново?</h2>
+      <p id="reset-description">Участники, переводы и суммы будут удалены. При необходимости сначала скачайте копию.</p>
       <div class="dialog-actions">
         <button class="secondary-button" value="cancel">Отмена</button>
         <button class="primary-button" id="confirm-reset" value="confirm">Сбросить данные</button>
       </div>
     </form>
   </dialog>
+  <script src="core.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="pwa.js" defer></script>
 </body>
 </html>

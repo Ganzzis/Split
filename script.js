@@ -37,28 +37,20 @@
   let state = DEFAULT_STATE();
   let toastTimer = null;
   let lastReport = '';
+  let drafts = {};
+  let savedSnapshot = null;
+  let recoveryRaw = null;
+  let storageBlocked = false;
+  let saveFailed = false;
 
   function uid() {
     try { return crypto.randomUUID(); }
     catch (_) { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
   }
-  function toCents(value) {
-    const number = Number(value);
-    if (!Number.isFinite(number) || number <= 0) return 0;
-    return Math.round((number + Number.EPSILON) * 100);
-  }
+  const toCents = SplitCore.toCents;
   function money(cents) {
     return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      .format((Number.isFinite(cents) ? cents : 0) / 100) + ' ₽';
-  }
-  function moneyPlain(cents) {
-    return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      .format((Number.isFinite(cents) ? cents : 0) / 100);
-  }
-  function escapeText(value) {
-    return String(value ?? '').replace(/[&<>"']/g, ch => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    })[ch]);
+      .format((Number.isFinite(cents) ? cents : 0) / 100) + '\u00a0₽';
   }
   function personName(person, index) {
     const name = String(person.name || '').trim();
@@ -74,79 +66,96 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2300);
   }
+  function storageStatus(message, error = false) {
+    $('#storage-status').textContent = message;
+    $('#storage-status').dataset.error = String(error);
+  }
+  function validMoney(raw) {
+    if (!/^\d*(?:[.,]\d{0,2})?$/.test(String(raw))) return false;
+    try { toCents(raw); return true; } catch (_) { return false; }
+  }
   function safeLoad() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        // Migrate the original app's separate keys where possible.
-        const oldPeople = localStorage.getItem('people');
-        const oldTransfers = localStorage.getItem('transfers');
-        if (oldPeople || oldTransfers) {
-          const parsedPeople = oldPeople ? JSON.parse(oldPeople) : [];
-          const parsedTransfers = oldTransfers ? JSON.parse(oldTransfers) : [];
-          state.people = Array.isArray(parsedPeople) ? parsedPeople.map(p => ({
-            id: uid(), name: String(p?.name ?? '').slice(0, 80), paid: toCents(p?.paid) / 100
-          })) : [];
-          state.transfers = Array.isArray(parsedTransfers) ? parsedTransfers.map(t => ({
-            id: uid(), from: Number(t?.from) || 0, to: Number(t?.to) || 1, amount: toCents(t?.amount) / 100
-          })) : [];
-          state.target = localStorage.getItem('target') || '';
-          normalizeState();
-          persist(false);
-          return;
-        }
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid saved state');
-      state = {
-        target: typeof parsed.target === 'string' || typeof parsed.target === 'number' ? String(parsed.target) : '',
-        people: Array.isArray(parsed.people) ? parsed.people.map(p => ({
-          id: typeof p?.id === 'string' ? p.id : uid(),
-          name: String(p?.name ?? '').slice(0, 80),
-          paid: toCents(p?.paid) / 100
-        })) : [],
-        transfers: Array.isArray(parsed.transfers) ? parsed.transfers.map(t => ({
-          id: typeof t?.id === 'string' ? t.id : uid(),
-          from: Number.isInteger(Number(t?.from)) ? Number(t.from) : 0,
-          to: Number.isInteger(Number(t?.to)) ? Number(t.to) : 1,
-          amount: toCents(t?.amount) / 100
-        })) : []
+      savedSnapshot = raw; recoveryRaw = raw;
+      let parsed;
+      const legacy = !raw && (localStorage.getItem('people') || localStorage.getItem('transfers'));
+      if (raw) parsed = JSON.parse(raw);
+      else if (legacy) {
+        recoveryRaw = JSON.stringify({people: localStorage.getItem('people'), transfers: localStorage.getItem('transfers'), target: localStorage.getItem('target')});
+        parsed = {people: JSON.parse(localStorage.getItem('people') || '[]'), transfers: JSON.parse(localStorage.getItem('transfers') || '[]'), target: localStorage.getItem('target') || ''};
+        if (Array.isArray(parsed.people) && !parsed.people.length) parsed.people = DEFAULT_STATE().people;
+      } else return;
+      if (!parsed || !Array.isArray(parsed.people) || !parsed.people.length || parsed.people.length > 100 || !Array.isArray(parsed.transfers) || parsed.transfers.length > 500) throw new Error('Invalid saved state');
+      const ids = new Set();
+      const uniqueId = value => {
+        const id = typeof value === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(value) && !ids.has(value) ? value : uid();
+        ids.add(id); return id;
       };
-      normalizeState();
+      const restored = {
+        target: String(parsed.target ?? ''),
+        people: parsed.people.map(p => {
+          if (!p || typeof p !== 'object') throw new Error('Invalid person');
+          return {id: uniqueId(p.id), name: String(p.name ?? '').slice(0,80), paid: toCents(p.paid ?? 0) / 100};
+        }),
+        transfers: parsed.transfers.map(t => {
+          if (!t || typeof t !== 'object') throw new Error('Invalid transfer');
+          const from = Number(t.from), to = Number(t.to);
+          if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= parsed.people.length || to >= parsed.people.length || from === to) throw new Error('Invalid transfer');
+          return {id: uniqueId(t.id), from, to, amount: toCents(t.amount ?? 0) / 100};
+        })
+      };
+      state = restored;
+      const keys = new Set(['target', ...state.people.map(p => `paid-${p.id}`), ...state.transfers.map(t => `transfer-${t.id}`)]);
+      drafts = {};
+      if (parsed.drafts && typeof parsed.drafts === 'object') {
+        for (const [key,value] of Object.entries(parsed.drafts)) if (keys.has(key) && typeof value === 'string' && !validMoney(value)) drafts[key] = value;
+      }
+      if (!validMoney(state.target)) { drafts.target = state.target; state.target = ''; }
+      if (legacy) persist(false);
+      recoveryRaw = null;
     } catch (error) {
-      console.warn('Не удалось прочитать сохранённые данные Split:', error);
-      state = DEFAULT_STATE();
-      showToast('Сохранённые данные повреждены — создан новый расчёт.');
+      state = DEFAULT_STATE(); drafts = {}; storageBlocked = true;
+      storageStatus('Не удалось прочитать данные. Скачайте исходную копию перед сбросом.', true);
     }
-  }
-  function normalizeState() {
-    if (!Array.isArray(state.people)) state.people = [];
-    if (state.people.length === 0) state.people = [{ id: uid(), name: '', paid: 0 }];
-    state.people = state.people.slice(0, 100).map(p => ({
-      id: p.id || uid(), name: String(p.name || '').slice(0, 80), paid: toCents(p.paid) / 100
-    }));
-    const maxIndex = state.people.length - 1;
-    state.transfers = (Array.isArray(state.transfers) ? state.transfers : []).filter(t =>
-      Number.isInteger(t.from) && Number.isInteger(t.to) &&
-      t.from >= 0 && t.from <= maxIndex && t.to >= 0 && t.to <= maxIndex && t.from !== t.to
-    ).slice(0, 500).map(t => ({
-      id: t.id || uid(), from: t.from, to: t.to, amount: toCents(t.amount) / 100
-    }));
-    state.target = String(state.target ?? '');
   }
   function persist(shouldRender = true) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      // Remove old keys after successful migration to the new state shape.
-      localStorage.removeItem('people');
-      localStorage.removeItem('transfers');
-      localStorage.removeItem('target');
-    } catch (error) {
-      console.warn('Не удалось сохранить данные Split:', error);
-      showToast('Не удалось сохранить данные. Проверьте свободное место браузера.');
+    if (!storageBlocked) {
+      try {
+        if (localStorage.getItem(STORAGE_KEY) !== savedSnapshot) {
+          storageBlocked = true;
+          storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.', true);
+        } else {
+          const serialized = JSON.stringify({...state, drafts});
+          localStorage.setItem(STORAGE_KEY, serialized); savedSnapshot = serialized; saveFailed = false;
+          storageStatus('Сохранено на устройстве');
+        }
+      } catch (_) {
+        saveFailed = true;
+        storageStatus('Не удалось сохранить. Скачайте копию до закрытия страницы.', true);
+      }
     }
     if (shouldRender) renderAll();
+  }
+  function bindMoney(input, key, value, onValue) {
+    input.type = 'text'; input.inputMode = 'decimal'; input.autocomplete = 'off'; input.enterKeyHint = 'done';
+    input.value = Object.hasOwn(drafts,key) ? drafts[key] : String(value || '');
+    const error = el('span','field-error'); error.id = `error-${key}`; error.setAttribute('aria-live','polite');
+    input.setAttribute('aria-describedby',error.id);
+    input.validateMoney = () => {
+      const ok = validMoney(input.value);
+      input.setAttribute('aria-invalid',String(!ok));
+      error.textContent = ok ? '' : 'От 0 до 1 млрд ₽, до 2 знаков после запятой.';
+      return ok;
+    };
+    input.validateMoney();
+    input.addEventListener('input', () => {
+      if (input.validateMoney()) { delete drafts[key]; onValue(input.value); }
+      else drafts[key] = input.value;
+      calculateAndRender(); persist(false);
+    });
+    input.addEventListener('keydown',event => { if (event.key === 'Enter') input.blur(); });
+    return error;
   }
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -163,26 +172,11 @@
     button.addEventListener('click', onClick);
     return button;
   }
-  function makeMoneyInput(className, value, placeholder, onChange, label) {
-    const wrap = el('div', 'money-small');
-    const input = el('input', className);
-    input.type = 'number';
-    input.min = '0';
-    input.step = '0.01';
-    input.inputMode = 'decimal';
-    input.value = value ? String(value) : '';
-    input.placeholder = placeholder;
-    input.setAttribute('aria-label', label);
-    input.addEventListener('change', () => {
-      const val = input.value.trim();
-      if (val && (!Number.isFinite(Number(val)) || Number(val) < 0)) {
-        input.value = '0';
-        showToast('Введите сумму не меньше нуля.');
-      }
-      onChange(toCents(input.value) / 100);
-    });
-    wrap.append(input, el('span', '', '₽'));
-    return wrap;
+  function makeMoneyInput(className, value, placeholder, onChange, label, key) {
+    const wrap = el('div','money-small'); const input = el('input',className);
+    input.placeholder = placeholder; input.setAttribute('aria-label',label);
+    const error = bindMoney(input,key,value,raw => onChange(toCents(raw)/100));
+    wrap.append(input,el('span','currency-symbol','₽'),error); return wrap;
   }
   function renderPeople() {
     els.people.replaceChildren();
@@ -202,8 +196,8 @@
         persist(false);
       });
       const paid = makeMoneyInput('person-paid', person.paid, 'Внёс', value => {
-        person.paid = value; calculateAndRender(); persist(false);
-      }, `Сколько внёс участник ${index + 1}`);
+        person.paid = value;
+      }, `Сколько внёс участник ${index + 1}`, `paid-${person.id}`);
       row.append(avatar, name, paid, makeRemoveButton('Удалить участника', () => removePerson(index)));
       els.people.append(row);
     });
@@ -213,7 +207,6 @@
     els.transfers.querySelectorAll('select[data-transfer-id]').forEach(select => {
       const transfer = state.transfers.find(t => t.id === select.dataset.transferId);
       if (!transfer) return;
-      const previous = select.value;
       select.replaceChildren();
       state.people.forEach((person, index) => {
         const option = el('option', '', personName(person, index));
@@ -222,7 +215,6 @@
       });
       const wanted = select.dataset.side === 'from' ? transfer.from : transfer.to;
       select.value = String(wanted);
-      if (previous !== select.value) select.dispatchEvent(new Event('change', { bubbles: true }));
     });
   }
   function renderTransfers() {
@@ -234,10 +226,11 @@
       arrow.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>';
       const to = makePersonSelect(transfer, 'to');
       const amount = makeMoneyInput('transfer-amount', transfer.amount, 'Сумма', value => {
-        transfer.amount = value; calculateAndRender(); persist(false);
-      }, `Сумма перевода ${index + 1}`);
+        transfer.amount = value;
+      }, `Сумма перевода ${index + 1}`, `transfer-${transfer.id}`);
       row.append(from, arrow, to, amount, makeRemoveButton('Удалить перевод', () => {
-        state.transfers.splice(index, 1); persist();
+        delete drafts[`transfer-${transfer.id}`]; state.transfers.splice(index, 1); persist();
+        (els.transfers.children[Math.min(index,state.transfers.length-1)]?.querySelector('select') || $('#add-transfer')).focus();
       }));
       els.transfers.append(row);
     });
@@ -255,11 +248,12 @@
     });
     select.value = String(transfer[side]);
     select.addEventListener('change', () => {
+      const previous = transfer[side];
       transfer[side] = Number(select.value);
       if (transfer.from === transfer.to && state.people.length > 1) {
-        transfer[side] = side === 'from' ? (transfer.to + 1) % state.people.length : (transfer.from + 1) % state.people.length;
-        select.value = String(transfer[side]);
-        showToast('Отправитель и получатель должны отличаться.');
+        transfer[side === 'from' ? 'to' : 'from'] = previous;
+        refreshTransferOptions();
+        showToast('Направление перевода изменено.');
       }
       calculateAndRender(); persist(false);
     });
@@ -270,12 +264,15 @@
       showToast('В расчёте должен остаться хотя бы один участник.');
       return;
     }
+    delete drafts[`paid-${state.people[index].id}`];
+    state.transfers.filter(t => t.from === index || t.to === index).forEach(t => delete drafts[`transfer-${t.id}`]);
     state.people.splice(index, 1);
     // Remove transfers touching the deleted participant and shift indexes above it.
     state.transfers = state.transfers.filter(t => t.from !== index && t.to !== index).map(t => ({
       ...t, from: t.from > index ? t.from - 1 : t.from, to: t.to > index ? t.to - 1 : t.to
     }));
     persist();
+    els.people.children[Math.min(index,state.people.length-1)]?.querySelector('input')?.focus();
     showToast('Участник удалён. Связанные переводы обновлены.');
   }
   function plural(n, one, few, many) {
@@ -285,66 +282,13 @@
     return many;
   }
 
-  // Calculate integer kopecks to avoid floating-point rounding drift.
-  function calculate() {
-    const n = state.people.length;
-    const contributions = state.people.map(p => toCents(p.paid));
-    const totalPaid = contributions.reduce((sum, value) => sum + value, 0);
-    const explicitTarget = state.target.trim() !== '' && Number.isFinite(Number(state.target));
-    const target = explicitTarget ? toCents(state.target) : totalPaid;
-    const shareBase = Math.floor(target / Math.max(n, 1));
-    let remainder = target - shareBase * n;
-    const shares = state.people.map(() => shareBase);
-    // Distribute remaining kopecks deterministically so shares sum exactly to the target.
-    for (let i = 0; i < shares.length && remainder > 0; i++, remainder--) shares[i]++;
-
-    const net = contributions.slice();
-    state.transfers.forEach(t => {
-      const amount = toCents(t.amount);
-      if (t.from < 0 || t.to < 0 || t.from >= n || t.to >= n || t.from === t.to) return;
-      net[t.from] -= amount; // sender pays
-      net[t.to] += amount;   // receiver gets
-    });
-    const balances = net.map((value, i) => value - shares[i]);
-    const delta = target - totalPaid; // positive: still needs to be collected into the shared pot
-    const progress = target > 0 ? Math.min(100, (totalPaid / target) * 100) : (totalPaid > 0 ? 100 : 0);
-    const gap = Math.abs(target - totalPaid);
-
-    // Settle participant-to-participant balances with a greedy minimum-transfer plan.
-    const creditors = [];
-    const debtors = [];
-    balances.forEach((value, i) => {
-      if (value > 0) creditors.push({ i, amount: value });
-      else if (value < 0) debtors.push({ i, amount: -value });
-    });
-    const debtorsTotal = debtors.reduce((s, x) => s + x.amount, 0);
-    const creditorsTotal = creditors.reduce((s, x) => s + x.amount, 0);
-    const settlement = [];
-    let di = 0, ci = 0;
-    while (di < debtors.length && ci < creditors.length) {
-      const d = debtors[di], c = creditors[ci];
-      const amount = Math.min(d.amount, c.amount);
-      if (amount > 0) settlement.push({ from: d.i, to: c.i, amount });
-      d.amount -= amount; c.amount -= amount;
-      if (d.amount === 0) di++;
-      if (c.amount === 0) ci++;
-    }
-    // The target pool is explicitly represented when contributions do not match the target.
-    const cashFlows = [];
-    if (delta > 0) {
-      // Amount still due to the shared pot; positive balances can be refunds/overpayments.
-      debtors.forEach(d => { if (d.amount > 0) cashFlows.push({ kind: 'pot-in', from: d.i, amount: d.amount }); });
-    } else if (delta < 0) {
-      // Excess money in the pot is returned to those who have overpaid relative to their share.
-      creditors.forEach(c => { if (c.amount > 0) cashFlows.push({ kind: 'pot-out', to: c.i, amount: c.amount }); });
-    }
-    return { n, contributions, totalPaid, target, shares, net, balances, progress, gap, delta, settlement, cashFlows, debtorsTotal, creditorsTotal };
-  }
+  function calculate() { return SplitCore.calculate(state); }
   function setText(selector, text) { $(selector).textContent = text; }
   function renderMetrics(result) {
-    setText('#total-paid', moneyPlain(result.totalPaid));
+    setText('#total-paid', money(result.totalPaid));
     setText('#target-total', money(result.target));
-    setText('#share-total', money(Math.floor(result.target / Math.max(result.n, 1))));
+    const low = Math.min(...result.shares), high = Math.max(...result.shares);
+    setText('#share-total', low === high ? money(low) : `${money(low)}–${money(high)}`);
     els.gapLabel.textContent = result.delta > 0 ? 'Осталось собрать' : result.delta < 0 ? 'Излишек в кассе' : 'Сумма совпала';
     els.gapTotal.textContent = money(result.gap);
     els.progressLabel.textContent = result.target === 0 ? 'Заполнено от цели' : 'Собрано от целевой суммы';
@@ -380,7 +324,7 @@
       const amount = el('div', 'balance-value');
       const status = el('div', 'balance-status');
       if (balance > 0) {
-        amount.classList.add('positive'); amount.textContent = `+${money(balance)}`; status.textContent = 'Переплатил';
+        amount.classList.add('positive'); amount.textContent = `+${money(balance)}`; status.textContent = 'К получению';
       } else if (balance < 0) {
         amount.classList.add('negative'); amount.textContent = `−${money(-balance)}`; status.textContent = 'Нужно доплатить';
       } else {
@@ -450,9 +394,14 @@
     renderMetrics(result);
     renderBalances(result);
     renderSettlement(result);
+    if (Object.keys(drafts).length) {
+      els.notice.textContent = 'Исправьте выделенные суммы. Расчёт показан по последним корректным значениям.';
+      els.notice.dataset.kind = 'warning'; els.copy.disabled = true; lastReport = '';
+    }
   }
   function renderAll() {
-    els.target.value = state.target;
+    els.target.value = Object.hasOwn(drafts,'target') ? drafts.target : state.target;
+    els.target.validateMoney?.();
     renderPeople();
     renderTransfers();
     calculateAndRender();
@@ -469,9 +418,11 @@
     if (state.transfers.length >= 500) { showToast('Слишком много переводов для одного расчёта.'); return; }
     state.transfers.push({ id: uid(), from: 0, to: 1, amount: 0 });
     persist();
-    els.transfers.querySelector('.transfer-amount:last-of-type')?.focus();
+    els.transfers.lastElementChild?.querySelector('.transfer-amount')?.focus();
   }
   function resetAll() {
+    drafts = {}; storageBlocked = false; recoveryRaw = null;
+    try { savedSnapshot = localStorage.getItem(STORAGE_KEY); } catch (_) {}
     state = DEFAULT_STATE();
     lastReport = '';
     persist();
@@ -496,7 +447,7 @@
     const isDark = theme === 'dark';
     $('#theme-toggle').setAttribute('aria-label', isDark ? 'Включить светлую тему' : 'Включить тёмную тему');
     $('#theme-toggle').title = isDark ? 'Включить светлую тему' : 'Включить тёмную тему';
-    try { $('meta[name="theme-color"]').content = isDark ? '#111019' : '#f5f4f9'; } catch (_) {}
+    try { $('meta[name="theme-color"]').content = isDark ? '#111216' : '#f4f3f8'; } catch (_) {}
   }
 
   $('#theme-toggle').addEventListener('click', () => {
@@ -514,16 +465,7 @@
     resetAll();
   });
   $('#clear-results').addEventListener('click', clearResults);
-  els.target.addEventListener('input', () => {
-    const raw = els.target.value;
-    if (raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) {
-      els.target.value = '0';
-      showToast('Целевая сумма не может быть отрицательной.');
-    }
-    state.target = els.target.value;
-    calculateAndRender();
-    persist(false);
-  });
+  els.target.parentElement.after(bindMoney(els.target,'target','',raw => { state.target = raw; }));
   els.copy.addEventListener('click', async () => {
     if (!lastReport) return;
     try {
@@ -534,11 +476,26 @@
       area.value = lastReport;
       area.style.position = 'fixed'; area.style.opacity = '0';
       document.body.append(area); area.select();
-      const ok = document.execCommand('copy'); area.remove();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      area.remove(); els.copy.focus();
       showToast(ok ? 'Итоги скопированы.' : 'Не удалось скопировать. Выделите текст вручную.');
     }
   });
 
+  $('#backup-btn').addEventListener('click', () => {
+    const blob = new Blob([recoveryRaw && storageBlocked ? recoveryRaw : JSON.stringify({...state,drafts},null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = 'split-backup.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url),1000);
+  });
+  window.addEventListener('storage',event => {
+    if ((event.key === STORAGE_KEY || event.key === null) && event.newValue !== savedSnapshot) {
+      storageBlocked = true; storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.',true);
+    }
+  });
+  window.addEventListener('beforeunload',event => {
+    if (saveFailed || storageBlocked) { event.preventDefault(); event.returnValue = ''; }
+  });
   safeLoad();
   // Preserve the original theme preference key during migration.
   try {

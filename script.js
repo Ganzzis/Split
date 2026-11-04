@@ -27,18 +27,26 @@
     resetDialog: $('#reset-dialog')
   };
 
-  const STORAGE_KEY = 'split-state-v2';
+  const STORAGE_KEY = SplitHistory.KEY;
+  const history = new SplitHistory.Store({getItem:key => localStorage.getItem(key), setItem:(key,value) => localStorage.setItem(key,value)});
+  let active = null;
+  let pendingImport = null;
+  let importGeneration = 0;
   const THEME_KEY = 'split-theme';
   const DEFAULT_STATE = () => ({
     target: '',
     people: [{ id: uid(), name: '', paid: 0 }, { id: uid(), name: '', paid: 0 }],
     transfers: []
   });
+  const freshItems = people => ({mode:'items',target:'',people:people.map(p=>({id:p.id,name:p.name,paid:0})),transfers:[],drafts:{},expenses:[],payments:[]});
+  const isItems = () => state.mode === 'items';
   let state = DEFAULT_STATE();
+  const itemsUI = SplitItemsUI.create({get:()=>state,save:()=>persist(false),recalculate:()=>calculateAndRender(),money,uid,toast:showToast,replace:next=>{state=next;drafts={};persist();}});
+  const shell=SplitShell.create({hasCurrent:()=>!!active,isItems,canNavigate:canLeave,history:home});
+  let lastTotal='';
   let toastTimer = null;
-  let lastReport = '';
+  let reportReady = false;
   let drafts = {};
-  let savedSnapshot = null;
   let recoveryRaw = null;
   let storageBlocked = false;
   let saveFailed = false;
@@ -75,70 +83,29 @@
     try { toCents(raw); return true; } catch (_) { return false; }
   }
   function safeLoad() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      savedSnapshot = raw; recoveryRaw = raw;
-      let parsed;
-      const legacy = !raw && (localStorage.getItem('people') || localStorage.getItem('transfers'));
-      if (raw) parsed = JSON.parse(raw);
-      else if (legacy) {
-        recoveryRaw = JSON.stringify({people: localStorage.getItem('people'), transfers: localStorage.getItem('transfers'), target: localStorage.getItem('target')});
-        parsed = {people: JSON.parse(localStorage.getItem('people') || '[]'), transfers: JSON.parse(localStorage.getItem('transfers') || '[]'), target: localStorage.getItem('target') || ''};
-        if (Array.isArray(parsed.people) && !parsed.people.length) parsed.people = DEFAULT_STATE().people;
-      } else return;
-      if (!parsed || !Array.isArray(parsed.people) || !parsed.people.length || parsed.people.length > 100 || !Array.isArray(parsed.transfers) || parsed.transfers.length > 500) throw new Error('Invalid saved state');
-      const ids = new Set();
-      const uniqueId = value => {
-        const id = typeof value === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(value) && !ids.has(value) ? value : uid();
-        ids.add(id); return id;
-      };
-      const restored = {
-        target: String(parsed.target ?? ''),
-        people: parsed.people.map(p => {
-          if (!p || typeof p !== 'object') throw new Error('Invalid person');
-          return {id: uniqueId(p.id), name: String(p.name ?? '').slice(0,80), paid: toCents(p.paid ?? 0) / 100};
-        }),
-        transfers: parsed.transfers.map(t => {
-          if (!t || typeof t !== 'object') throw new Error('Invalid transfer');
-          const from = Number(t.from), to = Number(t.to);
-          if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= parsed.people.length || to >= parsed.people.length || from === to) throw new Error('Invalid transfer');
-          return {id: uniqueId(t.id), from, to, amount: toCents(t.amount ?? 0) / 100};
-        })
-      };
-      state = restored;
-      const keys = new Set(['target', ...state.people.map(p => `paid-${p.id}`), ...state.transfers.map(t => `transfer-${t.id}`)]);
-      drafts = {};
-      if (parsed.drafts && typeof parsed.drafts === 'object') {
-        for (const [key,value] of Object.entries(parsed.drafts)) if (keys.has(key) && typeof value === 'string' && !validMoney(value)) drafts[key] = value;
-      }
-      if (!validMoney(state.target)) { drafts.target = state.target; state.target = ''; }
-      if (legacy) persist(false);
-      recoveryRaw = null;
-    } catch (error) {
-      state = DEFAULT_STATE(); drafts = {}; storageBlocked = true;
-      storageStatus('Не удалось прочитать данные. Скачайте исходную копию перед сбросом.', true);
-    }
+    try { history.load(); storageStatus('История сохранена на устройстве'); }
+    catch (_) { storageBlocked = true; recoveryRaw = history.recovery; storageStatus('Не удалось прочитать или сохранить историю. Скачайте исходную копию. Данные не перезаписаны.',true); }
+  }
+  function currentRecord() {
+    return active ? {...active,state:{...state,drafts}} : null;
+  }
+  function storageError(error) {
+    SplitShell.feedback('error');
+    saveFailed = true; storageBlocked = history.blocked;
+    storageStatus(error.message + ' Скачайте копию до закрытия страницы.',true);
   }
   function persist(shouldRender = true) {
-    if (!storageBlocked) {
+    if (active) {
+      active.updatedAt = SplitHistory.now();
       try {
-        if (localStorage.getItem(STORAGE_KEY) !== savedSnapshot) {
-          storageBlocked = true;
-          storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.', true);
-        } else {
-          const serialized = JSON.stringify({...state, drafts});
-          localStorage.setItem(STORAGE_KEY, serialized); savedSnapshot = serialized; saveFailed = false;
-          storageStatus('Сохранено на устройстве');
-        }
-      } catch (_) {
-        saveFailed = true;
-        storageStatus('Не удалось сохранить. Скачайте копию до закрытия страницы.', true);
-      }
+        history.put(currentRecord()); saveFailed = false;
+        storageStatus('Сохранено на устройстве');
+      } catch (error) { storageError(error); }
     }
     if (shouldRender) renderAll();
   }
   function bindMoney(input, key, value, onValue) {
-    input.type = 'text'; input.inputMode = 'decimal'; input.autocomplete = 'off'; input.enterKeyHint = 'done';
+    input.type = 'text'; input.maxLength = 1000; input.inputMode = 'decimal'; input.autocomplete = 'off'; input.enterKeyHint = 'done';
     input.value = Object.hasOwn(drafts,key) ? drafts[key] : String(value || '');
     const error = el('span','field-error'); error.id = `error-${key}`; error.setAttribute('aria-live','polite');
     input.setAttribute('aria-describedby',error.id);
@@ -192,12 +159,14 @@
         person.name = name.value.slice(0, 80);
         avatar.textContent = initials(person.name || `У${index + 1}`);
         refreshTransferOptions();
+        if (isItems()) itemsUI.render();
         calculateAndRender();
         persist(false);
       });
       const paid = makeMoneyInput('person-paid', person.paid, 'Внёс', value => {
         person.paid = value;
       }, `Сколько внёс участник ${index + 1}`, `paid-${person.id}`);
+      if (isItems()) { paid.hidden=true; row.classList.add('items-person-row'); }
       row.append(avatar, name, paid, makeRemoveButton('Удалить участника', () => removePerson(index)));
       els.people.append(row);
     });
@@ -260,6 +229,7 @@
     return select;
   }
   function removePerson(index) {
+    if (isItems()) {try {state=SplitItems.removePerson(state,state.people[index].id);persist();els.people.children[Math.min(index,state.people.length-1)]?.querySelector('input')?.focus();}catch(e){showToast(e.message);}return;}
     if (state.people.length <= 1) {
       showToast('В расчёте должен остаться хотя бы один участник.');
       return;
@@ -282,7 +252,7 @@
     return many;
   }
 
-  function calculate() { return SplitCore.calculate(state); }
+  function calculate() { return isItems() ? SplitItems.calculate(SplitItemsUI.preview(state).state) : SplitCore.calculate(state); }
   function setText(selector, text) { $(selector).textContent = text; }
   function renderMetrics(result) {
     setText('#total-paid', money(result.totalPaid));
@@ -308,7 +278,8 @@
       kind = 'success';
     }
     els.notice.textContent = message;
-    els.notice.dataset.kind = kind;
+    if (isItems()) { els.gapLabel.textContent='Уже компенсировано';els.gapTotal.textContent=money(state.payments.reduce((sum,p)=>sum+SplitItems.cents(p.amount),0));message='Учтены только позиции и выполненные компенсации. Взносы простого режима не используются.'; kind=''; }
+    els.notice.dataset.kind = kind; els.notice.textContent = message;
   }
   function renderBalances(result) {
     els.balances.replaceChildren();
@@ -363,7 +334,7 @@
       empty.append(el('span', 'empty-symbol', '✓'), el('strong', '', 'Взаиморасчёты не нужны'), el('p', '', 'Все участники находятся в балансе.'));
       els.settlement.append(empty);
       els.settlementFooter.textContent = 'Итог: дополнительные переводы не требуются.';
-      lastReport = `Split — взаиморасчёты\nЦелевая сумма: ${money(result.target)}\nВнесено: ${money(result.totalPaid)}\nПереводы не требуются.`;
+      reportReady = true;
       els.copy.disabled = false;
       return;
     }
@@ -380,31 +351,47 @@
       els.settlement.append(row);
     });
     els.settlementFooter.textContent = `${items.length} ${plural(items.length, 'операция', 'операции', 'операций')} · Суммы рассчитаны в копейках, округление распределено прозрачно.`;
-    lastReport = [
-      'Split — взаиморасчёты',
-      `Целевая сумма: ${money(result.target)}`,
-      `Внесено: ${money(result.totalPaid)}`,
-      '',
-      ...items.map(item => `${item.from} → ${item.to}: ${money(item.amount)}`)
-    ].join('\n');
+    reportReady = true;
     els.copy.disabled = false;
   }
   function calculateAndRender() {
     const result = calculate();
     renderMetrics(result);
+    const totalSignature=String(result.totalPaid);if(lastTotal!==totalSignature && shell.view==='results')SplitShell.pulse(els.totalPaid);lastTotal=totalSignature;
     renderBalances(result);
     renderSettlement(result);
+    if (isItems()) {
+      const preview=SplitItemsUI.preview(state);
+      if(state.expenseDraft){els.notice.textContent=preview.error || 'Предпросмотр открытого расхода включён в итог. Сначала сохраните расход.';els.notice.dataset.kind='warning';els.copy.disabled=true;reportReady=false;}
+      const proposals=SplitItems.proposals(preview.state);
+      proposals.forEach((proposal,index)=>{
+        const button=action('Отметить выполненным',()=>{
+          if(!canLeave())return;
+          try{state=SplitItems.complete(state,proposal.operationId,uid());persist();$('#results-heading').focus({preventScroll:true});showToast('Компенсация отмечена выполненной.');}catch(e){showToast(e.message);}
+        });button.disabled=!!state.expenseDraft;
+        els.settlement.children[index]?.append(button);
+      });
+    }
     if (Object.keys(drafts).length) {
       els.notice.textContent = 'Исправьте выделенные суммы. Расчёт показан по последним корректным значениям.';
-      els.notice.dataset.kind = 'warning'; els.copy.disabled = true; lastReport = '';
+      els.notice.dataset.kind = 'warning'; els.copy.disabled = true; reportReady = false;
     }
   }
   function renderAll() {
+    $('#editor-screen').dataset.mode=isItems()?'items':'simple';
+    $('#participants-help').textContent=isItems()?'Кто участвует в расходах':'Кто участвует и сколько уже внёс';
+    $('.progress-meta').hidden=isItems();els.progressTrack.hidden=isItems();
+    $('#target-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Всего по позициям':'Целевая сумма';
+    $('#share-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Доли участников':'Доля каждого';
+    $('#simple-target').hidden=isItems();$('#simple-transfers').hidden=isItems();
+    $('#editor-title').dataset.mode=isItems()?'По позициям':'Простой';
+    itemsUI.render();
     els.target.value = Object.hasOwn(drafts,'target') ? drafts.target : state.target;
     els.target.validateMoney?.();
     renderPeople();
     renderTransfers();
     calculateAndRender();
+    shell.sync();
   }
   function addPerson() {
     if (state.people.length >= 100) { showToast('Можно добавить не более 100 участников.'); return; }
@@ -421,10 +408,9 @@
     els.transfers.lastElementChild?.querySelector('.transfer-amount')?.focus();
   }
   function resetAll() {
-    drafts = {}; storageBlocked = false; recoveryRaw = null;
-    try { savedSnapshot = localStorage.getItem(STORAGE_KEY); } catch (_) {}
-    state = DEFAULT_STATE();
-    lastReport = '';
+    drafts = {};
+    state = isItems() ? freshItems(DEFAULT_STATE().people) : DEFAULT_STATE();
+    reportReady = false;
     persist();
     showToast('Создан новый расчёт.');
   }
@@ -436,7 +422,7 @@
     const empty2 = el('div', 'empty-state compact');
     empty2.append(el('span', 'empty-symbol', '⇄'), el('strong', '', 'Здесь появится план переводов'), el('p', '', 'Результат пересчитывается автоматически.'));
     els.balances.append(empty1); els.settlement.append(empty2);
-    els.copy.disabled = true; lastReport = '';
+    els.copy.disabled = true; reportReady = false;
     showToast('Отображение результата очищено. Данные сохранены.');
   }
   function setTheme(theme, save = true) {
@@ -456,6 +442,7 @@
   $('#add-person').addEventListener('click', addPerson);
   $('#add-transfer').addEventListener('click', addTransfer);
   $('#reset-btn').addEventListener('click', () => {
+    $('#reset-description').textContent=isItems()?'Позиции, участники, выполненные компенсации и черновики текущего расчёта будут удалены. Остальная история сохранится. Сначала экспортируйте копию при необходимости.':'Участники, переводы и суммы текущего расчёта будут удалены. При необходимости сначала скачайте копию.';
     if (typeof els.resetDialog.showModal === 'function') els.resetDialog.showModal();
     else if (window.confirm('Удалить участников, переводы и суммы?')) resetAll();
   });
@@ -467,35 +454,151 @@
   $('#clear-results').addEventListener('click', clearResults);
   els.target.parentElement.after(bindMoney(els.target,'target','',raw => { state.target = raw; }));
   els.copy.addEventListener('click', async () => {
-    if (!lastReport) return;
-    try {
-      await navigator.clipboard.writeText(lastReport);
-      showToast('Итоги скопированы в буфер обмена.');
-    } catch (_) {
-      const area = document.createElement('textarea');
-      area.value = lastReport;
-      area.style.position = 'fixed'; area.style.opacity = '0';
-      document.body.append(area); area.select();
-      let ok = false;
-      try { ok = document.execCommand('copy'); } catch (_) {}
-      area.remove(); els.copy.focus();
-      showToast(ok ? 'Итоги скопированы.' : 'Не удалось скопировать. Выделите текст вручную.');
-    }
+    if (!reportReady || !active) return;
+    const report=SplitReports.text(SplitReports.build(currentRecord(),{unsaved:saveFailed||storageBlocked}));
+    const ok=await SplitShareUI.copyText(report);
+    els.copy.focus();showToast(ok?'Итоги скопированы.':'Не удалось скопировать. Откройте «Поделиться» для ручного копирования.');
   });
 
-  $('#backup-btn').addEventListener('click', () => {
-    const blob = new Blob([recoveryRaw && storageBlocked ? recoveryRaw : JSON.stringify({...state,drafts},null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = 'split-backup.json'; link.click();
+  function download(raw, filename) {
+    const blob = new Blob([raw], {type:'application/json'});
+    const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = filename; link.click();
     setTimeout(() => URL.revokeObjectURL(url),1000);
+  }
+  function exportRecords(single = false) {
+    try {
+      if (recoveryRaw !== null && storageBlocked) { download(recoveryRaw,'split-recovery-original.json'); return; }
+      let values = history.list();
+      if (active) {
+        const current = currentRecord(), index = values.findIndex(r => r.id === current.id);
+        if (index < 0) values.push(current); else values[index] = current;
+      }
+      download(SplitHistory.encodeBackup(single && active ? [currentRecord()] : values), single ? 'split-calculation.json' : 'split-history.json');
+    } catch (error) { storageError(error); }
+  }
+  $('#backup-btn').addEventListener('click', () => exportRecords());
+  $('#export-history').addEventListener('click', () => exportRecords());
+  $('#export-current').addEventListener('click', () => exportRecords(true));
+
+  function action(label, fn, className = 'secondary-button') {
+    const button = el('button',className,label); button.type = 'button'; button.addEventListener('click',fn); return button;
+  }
+  function renderHistory() {
+    const list = $('#history-list'); list.replaceChildren();
+    const values = history.list().sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
+    $('#history-empty').hidden = values.length > 0;
+    for (const item of values) {
+      const card = el('article','panel history-card');
+      const title = el('h2','',item.name), date = el('time','',new Date(item.updatedAt).toLocaleString('ru-RU')); date.dateTime = item.updatedAt;
+      const buttons = el('div','history-actions');
+      buttons.append(action('Открыть',() => openRecord(item.id)), action('Переименовать',() => renameRecord(item)),
+        action('Дублировать',() => {
+          if (!canLeave()) return;
+          try { history.put({...item,id:uid(),name:(item.name + ' — копия').slice(0,120),updatedAt:SplitHistory.now()}); renderHistory(); storageStatus('Копия сохранена'); }
+          catch (e) { storageError(e); }
+        }), action('Экспорт JSON',() => download(SplitHistory.encodeBackup([item]),'split-calculation.json')),
+        action('Удалить',() => {
+          $('#delete-name').textContent = item.name;
+          $('#delete-dialog').dataset.recordId = item.id; $('#delete-dialog').showModal();
+        }));
+      const summary=item.state.mode==='items'?SplitItems.calculate(item.state):SplitCore.calculate(item.state);
+      SplitShell.compactActions(buttons,[null,'✎','⧉','↓','×']);
+      card.dataset.recordId=item.id;
+      card.append(title,el('p','mode-badge',item.state.mode==='items'?'По позициям':'Простой'),el('div','history-card-sum',money(summary.totalPaid)),el('p','history-card-meta',`${item.state.people.length} ${plural(item.state.people.length,'участник','участника','участников')}`),date,buttons); list.append(card);
+      if(list.children.length<=6)SplitShell.enter(card);
+    }
+  }
+  function canLeave() {
+    if (saveFailed || storageBlocked) { showToast('Скачайте копию и устраните ошибку хранения перед переходом.'); return false; }
+    return true;
+  }
+  function home() {
+    if (!canLeave()) return;
+    renderHistory(); shell.show('history');
+  }
+  function openRecord(id) {
+    if (!canLeave()) return;
+    const item = history.list().find(r => r.id === id); if (!item) return;
+    active = item; state = SplitHistory.clone(item.state); drafts = state.drafts || {}; delete state.drafts;
+    $('#editor-title').textContent = item.name;
+    itemsUI.reopen();shell.resetSection();renderAll();shell.show('calculation');
+  }
+  function renameRecord(item) {
+    if (!canLeave()) return;
+    $('#rename-name').value = item.name; $('#rename-dialog').dataset.recordId = item.id; $('#rename-dialog').showModal();
+  }
+  $('#rename-form').addEventListener('submit',event => {
+    event.preventDefault(); const name = $('#rename-name').value.trim(); if (!name) return;
+    const item = history.list().find(r => r.id === $('#rename-dialog').dataset.recordId); if (!item) return;
+    try {
+      const updated = {...item,name,updatedAt:SplitHistory.now()}; history.put(updated);
+      if (active?.id === item.id) { active = updated; $('#editor-title').textContent = name; }
+      $('#rename-dialog').close(); renderHistory(); storageStatus('Название сохранено');
+    } catch (e) { storageError(e); }
+  });
+  $('#confirm-delete').addEventListener('click',() => {
+    if (!canLeave()) return;
+    try {
+      const id=$('#delete-dialog').dataset.recordId;history.remove(id);if(active?.id===id)active=null;
+      $('#delete-dialog').close();shell.sync();storageStatus('Расчёт удалён');
+      const card=$('#history-list').querySelector(`[data-record-id="${id}"]`);SplitShell.exit(card).then(()=>{renderHistory();$('#history-heading').focus({preventScroll:true});});
+    }
+    catch (e) { storageError(e); }
+  });
+  $('#create-calculation').addEventListener('click',() => {
+    if (!canLeave()) return;
+    try {
+      const item = {id:uid(),name:'Новый расчёт',updatedAt:SplitHistory.now(),state:$('#new-mode').value==='items'?freshItems(DEFAULT_STATE().people):{...DEFAULT_STATE(),drafts:{}}};
+      history.put(item); openRecord(item.id);
+    } catch (e) { storageError(e); }
+  });
+  $('#switch-mode').addEventListener('click',()=>{if(canLeave())$('#mode-dialog').showModal();});
+  $('#confirm-mode').addEventListener('click',()=>{
+    if(!active || !canLeave())return;
+    try{
+      const next=isItems()?{...DEFAULT_STATE(),people:state.people.map(p=>({id:p.id,name:p.name,paid:0})),drafts:{}}:freshItems(state.people);
+      history.switchMode(active.id,next);$('#mode-dialog').close();openRecord(active.id);showToast('Исходный расчёт сохранён отдельной копией.');
+    }catch(e){storageError(e);}
+  });
+  $('#back-history').addEventListener('click',home);
+  $('.brand').addEventListener('click',event => { event.preventDefault(); home(); });
+  $('#rename-current').addEventListener('click',() => { if (active) renameRecord(active); });
+  for (const button of document.querySelectorAll('[data-close-dialog]')) button.addEventListener('click',() => button.closest('dialog').close());
+  $('#import-file').addEventListener('change',async event => {
+    const file = event.target.files[0]; event.target.value = ''; pendingImport = null; $('#confirm-import').disabled = true;
+    if (!file) return;
+    const generation = ++importGeneration;
+    $('#import-dialog').showModal(); $('#import-preview').textContent = 'Чтение файла…';
+    try {
+      if (file.size > SplitHistory.MAX_BYTES) throw new Error('Файл больше 10 МБ.');
+      const raw = await file.text();
+      if (generation !== importGeneration) return;
+      const incoming = SplitHistory.decodeBackup(raw);
+      const plan = SplitHistory.planImport(history.recoveryList(),incoming);
+      const summary = el('p','',`Добавится: ${plan.added.length}. Уже есть: ${plan.skipped.length}. Конфликты ID (будут копиями): ${plan.conflicts.length}. Существующие расчёты сохранятся.`);
+      if (history.loadFailed) summary.append(document.createTextNode(' Повреждённый оригинал будет сохранён отдельно на устройстве до восстановления. Рекомендуем также скачать исходную копию.'));
+      const list = el('ul'); for (const item of incoming) list.append(el('li','',`${item.name} · ${new Date(item.updatedAt).toLocaleString('ru-RU')} · ${item.state.people.length} участн.`));
+      $('#import-preview').replaceChildren(summary,list); pendingImport = incoming; $('#confirm-import').disabled = false;
+    } catch (_) { if (generation !== importGeneration) return; $('#import-preview').textContent = 'Не удалось прочитать файл: неверный JSON, версия, данные или превышены лимиты. История не изменена.'; }
+  });
+  $('#import-dialog').addEventListener('close',() => { if (!$('#import-dialog').open) { pendingImport = null; importGeneration++; } });
+  $('#confirm-import').addEventListener('click',() => {
+    if (!pendingImport || (!history.loadFailed && !canLeave())) return;
+    try {
+      const plan = history.loadFailed ? history.recover(pendingImport) : history.restore(pendingImport);
+      storageBlocked = false; saveFailed = false; recoveryRaw = null; pendingImport = null; $('#import-dialog').close();
+      renderHistory(); storageStatus(`Восстановлено: ${plan.added.length}. Повторы пропущены: ${plan.skipped.length}.`);
+    } catch (e) { storageError(e); }
   });
   window.addEventListener('storage',event => {
-    if ((event.key === STORAGE_KEY || event.key === null) && event.newValue !== savedSnapshot) {
-      storageBlocked = true; storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.',true);
+    if ((event.key === STORAGE_KEY || event.key === null) && event.newValue !== history.snapshot) {
+      history.blocked = true; storageBlocked = true; storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.',true);
     }
   });
   window.addEventListener('beforeunload',event => {
     if (saveFailed || storageBlocked) { event.preventDefault(); event.returnValue = ''; }
   });
+  SplitShareUI.create({record:currentRecord,unsaved:()=>saveFailed||storageBlocked,toast:showToast});
   safeLoad();
   // Preserve the original theme preference key during migration.
   try {
@@ -505,4 +608,6 @@
     else setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
   } catch (_) {}
   renderAll();
+  SplitShell.compactActions($('.editor-navigation'),[null,'⇄','✎','↓']);
+  renderHistory();shell.sync();
 })();

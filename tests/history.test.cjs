@@ -33,7 +33,7 @@ test('preview does not write; confirmation merges; repeated import is idempotent
  assert.equal(s.restore(incoming).added.length,0);assert.equal(new H.Store(a).load().length,3);
 });
 test('corrupt and unsupported backups rejected atomically including invalid amounts/IDs/dates',()=>{
- for(const raw of ['{broken','null','{"format":"split-backup","version":5,"records":[]}',JSON.stringify({format:'split-backup',version:4,records:[record(),record()]}), ...[
+ for(const raw of ['{broken','null','{"format":"split-backup","version":6,"records":[]}',JSON.stringify({format:'split-backup',version:4,records:[record(),record()]}), ...[
  {...record(),updatedAt:'yesterday'}, {...record(),id:'__proto__'}, {...record(),state:{...state(),people:[]}}, {...record(),state:{...state(),transfers:[{id:'bad',from:0,to:99,amount:2}]}}, {...record(),state:{...state(),target:-1}}
  ].map(r=>JSON.stringify({format:'split-backup',version:4,records:[r]}))]) assert.throws(()=>H.decodeBackup(raw));
 });

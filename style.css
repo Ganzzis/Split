@@ -340,3 +340,32 @@ input[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 2px var
 #import-file { font-size:16px; }
 
 #delete-dialog, #import-dialog { padding:27px; }
+/* Mobile-first item editor */
+.mode-choice {display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:13px;}
+.mode-choice select, .items-panel input:not([type=checkbox]), .items-panel select {min-width:0; width:100%; min-height:46px; padding:10px; font:inherit; font-size:16px; color:var(--text); background:var(--input); border:1px solid var(--border-strong); border-radius:10px;}
+.items-panel {padding:24px; margin:20px 0;}
+.items-panel label {display:block; font-size:14px; margin:12px 0;}
+.items-fields {display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.expense-card {padding:16px 0; border-bottom:1px solid var(--border); overflow-wrap:anywhere;}
+.expense-card p, .mode-badge {font-size:14px; color:var(--muted); margin:10px 0;}
+.items-panel fieldset {border:1px solid var(--border-strong); border-radius:12px; padding:12px; margin-top:16px; min-width:0;}
+.share-row {display:flex; align-items:center; gap:8px; min-width:0;}
+.share-row .share-person {display:flex; align-items:center; gap:10px; flex:1; min-width:0; overflow-wrap:anywhere;}
+.share-person input {width:24px; height:24px; flex-shrink:0; accent-color:var(--accent-strong);}
+.share-row .share-value {width:110px !important;}
+#expense-editor {border-top:1px solid var(--border); margin-top:20px; padding-top:20px;}
+#payments-section {margin-top:24px;}
+#payments-section summary {min-height:44px; cursor:pointer; padding:12px 0; color:var(--accent);}
+.items-person-row {grid-template-columns:32px minmax(0,1fr) 32px !important;}
+#mode-dialog {padding:27px;}
+.settlement-row:has(button) {display:flex; flex-wrap:wrap; gap:12px;}
+.settlement-row:has(button) > button {min-height:44px; flex-basis:100%;}
+.editor-title::after {content:attr(data-mode);display:block;font-size:13px;color:var(--accent);margin-top:8px;}
+@media(max-width:500px){.items-panel{padding:18px;}.items-fields{grid-template-columns:1fr;gap:0;}.share-row .share-value{width:88px !important;}}
+
+.editor-title {font-size:24px;}
+#editor-screen[data-mode=items] > .intro {display:none;}
+.items-panel a {display:inline-flex;align-items:center;min-height:44px;}
+@media(max-width:600px){.items-person-row{grid-template-columns:minmax(0,1fr) 44px !important;}}
+
+.items-panel button, #mode-dialog button {min-height:44px;}

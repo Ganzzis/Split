@@ -1,9 +1,9 @@
 /* Persistence boundary: UI depends on this store, not on a native/web platform API.
  * A future Capacitor adapter must implement getItem/setItem and equivalent conflict control. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./core.js'));
-  else root.SplitHistory = factory(root.SplitCore);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (core) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./core.js'),require('./items-core.js'));
+  else root.SplitHistory = factory(root.SplitCore,root.SplitItems);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (core, items) {
   'use strict';
   const KEY = 'split-history-v4', LEGACY = 'split-state-v2';
   const MAX_RECORDS = 500, MAX_BYTES = 10 * 1024 * 1024;
@@ -19,7 +19,38 @@
     if (!/^\d*(?:[.,]\d{0,2})?$/.test(String(value))) fail();
     core.toCents(value); return value;
   }
+  function itemState(value) {
+    if (!object(value) || value.mode !== 'items' || !Array.isArray(value.people)) fail();
+    if((value.target!==undefined && value.target!=='') || (value.transfers!==undefined && (!Array.isArray(value.transfers)||value.transfers.length)) || (value.drafts!==undefined && (!object(value.drafts)||Object.keys(value.drafts).length)))fail();
+    const raw=v=>{if(!['string','number'].includes(typeof v))fail();return text(String(v),1000);};
+    const people=value.people.map(p=>{if(!object(p)||!idOK(p.id)||(p.paid!==undefined && p.paid!==0))fail();return {id:p.id,name:text(p.name,80),paid:0};});
+    const ids=items.peopleIDs(people);
+    const expense=(e,draft=false)=>{
+      if(!object(e)||!idOK(e.id)||!ids.includes(e.payerId)||!['equal','fixed','percent'].includes(e.split)||!Array.isArray(e.shares)||e.shares.length>ids.length)fail();
+      const result={id:e.id,title:text(e.title,120),amount:raw(e.amount),payerId:e.payerId,split:e.split,shares:e.shares.map(s=>{if(!object(s)||!ids.includes(s.personId))fail();return {personId:s.personId,value:raw(s.value ?? '')};})};
+      if(new Set(result.shares.map(s=>s.personId)).size!==result.shares.length)fail();
+      if(!draft)items.allocate(result,people);return result;
+    };
+    if(!Array.isArray(value.expenses)||value.expenses.length>500||!Array.isArray(value.payments)||value.payments.length>500)fail();
+    const result={mode:'items',target:'',people,transfers:[],drafts:{},expenses:value.expenses.map(e=>expense(e)),payments:value.payments.map(p=>{
+      if(!object(p))fail();const r={id:p.id,fromId:p.fromId,toId:p.toId,amount:money(p.amount)};
+      if(p.operationId!==undefined)r.operationId=p.operationId;return r;
+    })};
+    items.validate(result);
+    if(value.expenseDraft!==undefined && value.expenseDraft!==null){
+      result.expenseDraft=expense(value.expenseDraft,true);
+      if(ids.includes(result.expenseDraft.id)||result.payments.some(p=>p.id===result.expenseDraft.id))fail();
+    }
+    if(value.paymentDraft!==undefined && value.paymentDraft!==null){
+      const p=value.paymentDraft;if(!object(p)||!ids.includes(p.fromId)||!ids.includes(p.toId))fail();
+      result.paymentDraft={fromId:p.fromId,toId:p.toId,amount:text(p.amount,1000)};
+    }
+    return result;
+  }
   function state(value, legacy = false) {
+    if (value?.mode === 'items') return itemState(value);
+    if (value?.mode !== undefined && value.mode !== 'simple') fail();
+    if (value && ['expenses','payments','expenseDraft','paymentDraft'].some(key=>value[key]!==undefined)) fail();
     if (!object(value) || !Array.isArray(value.people) || value.people.length < 1 || value.people.length > 100 || !Array.isArray(value.transfers) || value.transfers.length > 500) fail();
     const ids = new Set();
     const getId = raw => {
@@ -56,6 +87,7 @@
       if (!legacy || typeof result.target !== 'string') throw e;
       result.drafts.target = text(result.target,1000); result.target = '';
     }
+    if (value.mode === 'simple') result.mode='simple';
     return result;
   }
   function record(value) {
@@ -80,16 +112,17 @@
   function decodeBackup(raw) {
     const value = parse(raw);
     if (object(value) && Array.isArray(value.people)) {
+      if(value.mode==='items')fail();
       // Split 3.0's downloadable raw-state backup.
       let hash = 14695981039346656037n;
       for (const char of raw) hash = BigInt.asUintN(64,(hash ^ BigInt(char.codePointAt(0))) * 1099511628211n);
       return [{id:`legacy-${hash.toString(16)}`,name:'Расчёт из Split 3.0',updatedAt:now(),state:state(value,true)}];
     }
-    if (!object(value) || value.format !== 'split-backup' || value.version !== 4) fail();
+    if (!object(value) || value.format !== 'split-backup' || ![4,5].includes(value.version)) fail();
     return records(value.records);
   }
   function encodeBackup(values) {
-    return JSON.stringify({format:'split-backup',version:4,exportedAt:now(),records:records(values)});
+    return JSON.stringify({format:'split-backup',version:5,exportedAt:now(),records:records(values)});
   }
   function planImport(current, incoming) {
     const merged = clone(current), added = [], skipped = [], conflicts = [];
@@ -112,8 +145,8 @@
         const raw=this.adapter.getItem(KEY); this.snapshot=raw; this.recovery=raw;
         if (raw !== null) {
           const value=parse(raw);
-          if (!object(value) || value.version !== 4 || typeof value.legacyMigrated !== 'boolean') fail();
-          this.data={version:4,legacyMigrated:value.legacyMigrated,records:records(value.records)};
+          if (!object(value) || ![4,5].includes(value.version) || typeof value.legacyMigrated !== 'boolean') fail();
+          this.data={version:value.version,legacyMigrated:value.legacyMigrated,records:records(value.records)};
         }
         if (!this.data.legacyMigrated) {
           const old=this.adapter.getItem(LEGACY); let legacy;
@@ -138,6 +171,9 @@
       if (this.blocked) throw new Error('Запись заблокирована. Скачайте копию и перезагрузите страницу.');
       try {
         if (this.adapter.getItem(KEY) !== this.snapshot) { this.blocked=true; throw new Error('История изменена в другой вкладке. Скачайте копию и перезагрузите страницу.'); }
+        next={...next,version:5};
+        // Preserve the pre-items document before the first schema-5 write.
+        if(this.data.version===4 && this.snapshot && !this.loadFailed && JSON.parse(this.snapshot).version===4 && this.adapter.getItem('split-history-before-v5')===null) this.adapter.setItem('split-history-before-v5',this.snapshot);
         const serialized=JSON.stringify(next);
         if (new TextEncoder().encode(encodeBackup(next.records)).length > MAX_BYTES) throw new Error('История превышает лимит 10 МБ. Экспортируйте и удалите ненужные расчёты.');
         this.adapter.setItem(KEY,serialized); this.snapshot=serialized; this.data=next; this.failed=false;
@@ -148,6 +184,14 @@
       if (index < 0) { if (next.records.length >= MAX_RECORDS) fail(); next.records.push(item); }
       else next.records[index]=item;
       this.commit(next); return clone(item);
+    }
+    switchMode(id,nextState) {
+      const next=clone(this.data),index=next.records.findIndex(r=>r.id===id);if(index<0)fail();
+      if(next.records.length>=MAX_RECORDS)fail();
+      const original=next.records[index];
+      next.records.push({...clone(original),id:uid(),name:(original.name+' — до смены режима').slice(0,120)});
+      next.records[index]=record({...original,updatedAt:now(),state:nextState});
+      this.commit(next);
     }
     remove(id) { const next=clone(this.data); next.records=next.records.filter(r=>r.id!==id); this.commit(next); }
     recover(incoming) {

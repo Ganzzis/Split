@@ -1,8 +1,8 @@
 'use strict';
 // Increment on every application-shell release.
 const CACHE_PREFIX = 'split-shell-';
-const CACHE_NAME = `${CACHE_PREFIX}v4.0.0`;
-const SHELL = ['./','./index.html','./style.css','./core.js','./history.js','./script.js','./pwa.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','./icons/apple-touch-icon.png'];
+const CACHE_NAME = `${CACHE_PREFIX}v4.1.0`;
+const SHELL = ['./','./index.html','./style.css','./core.js','./history.js','./items-core.js','./items-ui.js','./script.js','./pwa.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','./icons/apple-touch-icon.png'];
 const shellURLs = new Set(SHELL.map(path => new URL(path,self.location).href));
 self.addEventListener('install',event => {
  event.waitUntil((async () => {

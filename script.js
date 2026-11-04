@@ -38,7 +38,10 @@
     people: [{ id: uid(), name: '', paid: 0 }, { id: uid(), name: '', paid: 0 }],
     transfers: []
   });
+  const freshItems = people => ({mode:'items',target:'',people:people.map(p=>({id:p.id,name:p.name,paid:0})),transfers:[],drafts:{},expenses:[],payments:[]});
+  const isItems = () => state.mode === 'items';
   let state = DEFAULT_STATE();
+  const itemsUI = SplitItemsUI.create({get:()=>state,save:()=>persist(false),recalculate:()=>calculateAndRender(),money,uid,toast:showToast,replace:next=>{state=next;drafts={};persist();}});
   let toastTimer = null;
   let lastReport = '';
   let drafts = {};
@@ -153,12 +156,14 @@
         person.name = name.value.slice(0, 80);
         avatar.textContent = initials(person.name || `У${index + 1}`);
         refreshTransferOptions();
+        if (isItems()) itemsUI.render();
         calculateAndRender();
         persist(false);
       });
       const paid = makeMoneyInput('person-paid', person.paid, 'Внёс', value => {
         person.paid = value;
       }, `Сколько внёс участник ${index + 1}`, `paid-${person.id}`);
+      if (isItems()) { paid.hidden=true; row.classList.add('items-person-row'); }
       row.append(avatar, name, paid, makeRemoveButton('Удалить участника', () => removePerson(index)));
       els.people.append(row);
     });
@@ -221,6 +226,7 @@
     return select;
   }
   function removePerson(index) {
+    if (isItems()) {try {state=SplitItems.removePerson(state,state.people[index].id);persist();}catch(e){showToast(e.message);}return;}
     if (state.people.length <= 1) {
       showToast('В расчёте должен остаться хотя бы один участник.');
       return;
@@ -243,7 +249,7 @@
     return many;
   }
 
-  function calculate() { return SplitCore.calculate(state); }
+  function calculate() { return isItems() ? SplitItems.calculate(SplitItemsUI.preview(state).state) : SplitCore.calculate(state); }
   function setText(selector, text) { $(selector).textContent = text; }
   function renderMetrics(result) {
     setText('#total-paid', money(result.totalPaid));
@@ -269,7 +275,8 @@
       kind = 'success';
     }
     els.notice.textContent = message;
-    els.notice.dataset.kind = kind;
+    if (isItems()) { els.gapLabel.textContent='Уже компенсировано';els.gapTotal.textContent=money(state.payments.reduce((sum,p)=>sum+SplitItems.cents(p.amount),0));message='Учтены только позиции и выполненные компенсации. Взносы простого режима не используются.'; kind=''; }
+    els.notice.dataset.kind = kind; els.notice.textContent = message;
   }
   function renderBalances(result) {
     els.balances.replaceChildren();
@@ -355,12 +362,34 @@
     renderMetrics(result);
     renderBalances(result);
     renderSettlement(result);
+    if (isItems()) {
+      const preview=SplitItemsUI.preview(state);
+      if(state.expenseDraft){els.notice.textContent=preview.error || 'Предпросмотр открытого расхода включён в итог. Сначала сохраните расход.';els.notice.dataset.kind='warning';els.copy.disabled=true;lastReport='';}
+      const proposals=SplitItems.proposals(preview.state);
+      proposals.forEach((proposal,index)=>{
+        const button=action('Отметить выполненным',()=>{
+          if(!canLeave())return;
+          try{state=SplitItems.complete(state,proposal.operationId,uid());persist();}catch(e){showToast(e.message);}
+        });button.disabled=!!state.expenseDraft;
+        els.settlement.children[index]?.append(button);
+      });
+    }
     if (Object.keys(drafts).length) {
       els.notice.textContent = 'Исправьте выделенные суммы. Расчёт показан по последним корректным значениям.';
       els.notice.dataset.kind = 'warning'; els.copy.disabled = true; lastReport = '';
     }
   }
   function renderAll() {
+    $('#editor-screen').dataset.mode=isItems()?'items':'simple';
+    $('#participants-help').textContent=isItems()?'Кто участвует в расходах':'Кто участвует и сколько уже внёс';
+    const dock=$('.mobile-dock a');dock.href=isItems()?'#items-heading':'#setup-heading';dock.textContent=isItems()?'Расходы':'Настройка';
+    $('.skip-link').textContent=active?'Перейти к расчёту':'Перейти к истории';
+    $('.progress-meta').hidden=isItems();els.progressTrack.hidden=isItems();
+    $('#target-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Всего по позициям':'Целевая сумма';
+    $('#share-total').closest('.metric-card').querySelector('.metric-label').textContent=isItems()?'Доли участников':'Доля каждого';
+    $('#items-panel').hidden=!isItems();$('#simple-target').hidden=isItems();$('#simple-transfers').hidden=isItems();
+    $('#editor-title').dataset.mode=isItems()?'По позициям':'Простой';
+    itemsUI.render();
     els.target.value = Object.hasOwn(drafts,'target') ? drafts.target : state.target;
     els.target.validateMoney?.();
     renderPeople();
@@ -383,7 +412,7 @@
   }
   function resetAll() {
     drafts = {};
-    state = DEFAULT_STATE();
+    state = isItems() ? freshItems(DEFAULT_STATE().people) : DEFAULT_STATE();
     lastReport = '';
     persist();
     showToast('Создан новый расчёт.');
@@ -416,6 +445,7 @@
   $('#add-person').addEventListener('click', addPerson);
   $('#add-transfer').addEventListener('click', addTransfer);
   $('#reset-btn').addEventListener('click', () => {
+    $('#reset-description').textContent=isItems()?'Позиции, участники, выполненные компенсации и черновики текущего расчёта будут удалены. Остальная история сохранится. Сначала экспортируйте копию при необходимости.':'Участники, переводы и суммы текущего расчёта будут удалены. При необходимости сначала скачайте копию.';
     if (typeof els.resetDialog.showModal === 'function') els.resetDialog.showModal();
     else if (window.confirm('Удалить участников, переводы и суммы?')) resetAll();
   });
@@ -484,7 +514,7 @@
           $('#delete-name').textContent = item.name;
           $('#delete-dialog').dataset.recordId = item.id; $('#delete-dialog').showModal();
         }));
-      card.append(title,date,buttons); list.append(card);
+      card.append(title,el('p','mode-badge',item.state.mode==='items'?'По позициям':'Простой'),date,buttons); list.append(card);
     }
   }
   function canLeave() {
@@ -493,7 +523,7 @@
   }
   function home() {
     if (!canLeave()) return;
-    active = null; $('#home-screen').hidden = false; $('#editor-screen').hidden = true;
+    active = null; $('.skip-link').textContent='Перейти к истории'; $('#home-screen').hidden = false; $('#editor-screen').hidden = true;
     $('#reset-btn').hidden = true; $('.mobile-dock').hidden = true; $('.skip-link').href = '#history-heading'; renderHistory(); $('#history-heading').focus();
   }
   function openRecord(id) {
@@ -525,9 +555,17 @@
   $('#create-calculation').addEventListener('click',() => {
     if (!canLeave()) return;
     try {
-      const item = {id:uid(),name:'Новый расчёт',updatedAt:SplitHistory.now(),state:{...DEFAULT_STATE(),drafts:{}}};
+      const item = {id:uid(),name:'Новый расчёт',updatedAt:SplitHistory.now(),state:$('#new-mode').value==='items'?freshItems(DEFAULT_STATE().people):{...DEFAULT_STATE(),drafts:{}}};
       history.put(item); openRecord(item.id);
     } catch (e) { storageError(e); }
+  });
+  $('#switch-mode').addEventListener('click',()=>{if(canLeave())$('#mode-dialog').showModal();});
+  $('#confirm-mode').addEventListener('click',()=>{
+    if(!active || !canLeave())return;
+    try{
+      const next=isItems()?{...DEFAULT_STATE(),people:state.people.map(p=>({id:p.id,name:p.name,paid:0})),drafts:{}}:freshItems(state.people);
+      history.switchMode(active.id,next);$('#mode-dialog').close();openRecord(active.id);showToast('Исходный расчёт сохранён отдельной копией.');
+    }catch(e){storageError(e);}
   });
   $('#back-history').addEventListener('click',home);
   $('.brand').addEventListener('click',event => { event.preventDefault(); home(); });

@@ -55,6 +55,7 @@
         <p>Сохраняйте общие расходы и возвращайтесь к ним в любое время.</p>
       </div>
       <div class="history-actions">
+        <label class="mode-choice">Режим нового расчёта<select id="new-mode"><option value="simple">Простой</option><option value="items">По позициям</option></select></label>
         <button class="primary-button" id="create-calculation" type="button">Новый расчёт</button>
         <button class="secondary-button" id="export-history" type="button">Экспорт всей истории</button>
         <label class="secondary-button import-label">Импорт JSON<input id="import-file" type="file" accept=".json,application/json"></label>
@@ -65,16 +66,43 @@
     <div id="editor-screen" hidden>
       <div class="history-actions editor-navigation">
         <button id="back-history" class="secondary-button" type="button">← Мои расчёты</button>
+        <button id="switch-mode" class="secondary-button" type="button">Сменить режим</button>
         <button id="rename-current" class="secondary-button" type="button">Переименовать</button>
         <button id="export-current" class="secondary-button" type="button">Экспорт расчёта</button>
       </div>
-      <h2 id="editor-title" class="editor-title"></h2>
+      <h1 id="editor-title" class="editor-title"></h1>
     <section class="intro">
       <div class="eyebrow"><span class="eyebrow-line"></span>ОБЩИЕ РАСХОДЫ БЕЗ ПУТАНИЦЫ</div>
       <h1>Разделить счёт<span class="title-period">.</span></h1>
       <p>Соберите расходы, учтите переводы и узнайте, кто кому сколько должен.</p>
     </section>
 
+    <section id="items-panel" class="panel items-panel" hidden aria-labelledby="items-heading">
+      <div class="panel-heading"><h2 id="items-heading" tabindex="-1">Расходы по позициям</h2><div class="history-actions"><a class="text-button" href="#setup-heading">Участники</a><a class="text-button" href="#results">Итоги ↓</a></div></div>
+      <p id="expenses-empty" class="notice">Добавьте первый расход: кто оплатил и между кем его разделить.</p>
+      <div id="expenses-list"></div><button id="add-expense" class="primary-button" type="button">Добавить расход</button>
+      <section id="expense-editor" hidden aria-labelledby="expense-editor-title">
+        <h3 id="expense-editor-title">Редактирование расхода</h3>
+        <form id="expense-form" novalidate>
+          <label>Название<input id="expense-title" maxlength="120" autocomplete="off"></label>
+          <div class="items-fields"><label>Сумма, ₽<input id="expense-amount" inputmode="decimal" maxlength="1000" aria-describedby="expense-error"></label>
+          <label>Кто оплатил<select id="expense-payer"></select></label></div>
+          <label>Как разделить<select id="expense-split"><option value="equal">Поровну</option><option value="fixed">Фиксированные суммы</option><option value="percent">Процентные доли</option></select></label>
+          <fieldset><legend>Кто участвует в расходе</legend><div id="expense-shares"></div></fieldset>
+          <p id="expense-error" class="notice" role="status"></p>
+          <div class="history-actions"><button id="save-expense" class="primary-button" type="submit">Сохранить расход</button><button id="cancel-expense" class="secondary-button" type="button">Отменить изменения</button></div>
+        </form>
+      </section>
+      <details id="payments-section"><summary>Уже выполненные компенсации</summary>
+        <div id="payments-list"></div>
+        <form id="payment-form" novalidate><h3>Добавить выполненный перевод</h3>
+          <div class="items-fields"><label>Отправитель<select id="payment-from"></select></label><label>Получатель<select id="payment-to"></select></label></div>
+          <label>Переведено, ₽<input id="payment-amount" inputmode="decimal" maxlength="1000"></label>
+          <p id="payment-error" class="notice" role="status"></p>
+          <div class="history-actions"><button class="primary-button" type="submit">Учесть перевод</button><button id="cancel-payment" class="secondary-button" type="button">Очистить черновик перевода</button></div>
+        </form>
+      </details>
+    </section>
     <div class="workspace">
       <section class="panel input-panel" aria-labelledby="setup-heading">
         <div class="panel-heading">
@@ -85,6 +113,7 @@
           <span class="heading-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 4v6m10-6v6M4 17h16m-13-3v6m10-6v6"/></svg></span>
         </div>
 
+        <div id="simple-target">
         <label class="field-label" for="target">Общая сумма расходов <span class="label-hint">₽</span></label>
         <div class="money-field target-field">
           <span class="money-symbol">₽</span>
@@ -94,10 +123,11 @@
         <p class="field-help">Если оставить пустым, сумма расходов будет равна сумме внесённых средств.</p>
 
         <div class="section-divider"></div>
+        </div>
         <div class="section-title-row">
           <div>
             <h3>Участники</h3>
-            <p>Кто участвует и сколько уже внёс</p>
+            <p id="participants-help">Кто участвует и сколько уже внёс</p>
           </div>
           <span class="count-pill" id="people-count">2 человека</span>
         </div>
@@ -108,6 +138,7 @@
         </button>
 
         <div class="section-divider"></div>
+        <div id="simple-transfers">
         <div class="section-title-row">
           <div>
             <h3>Переводы между участниками</h3>
@@ -121,6 +152,7 @@
           Добавить перевод
         </button>
 
+        </div>
         <div class="panel-footer">
           <span class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Ничего не отправляется на сервер</span>
           <button class="text-button" id="clear-results" type="button">Очистить результат</button>
@@ -236,8 +268,11 @@
     <h2 id="import-title">Восстановление из JSON</h2><div id="import-preview" role="status"></div>
     <div class="dialog-actions"><button type="button" class="secondary-button" data-close-dialog>Отмена</button><button type="button" class="primary-button" id="confirm-import" disabled>Подтвердить восстановление</button></div>
   </dialog>
+  <dialog id="mode-dialog" class="confirm-dialog" aria-labelledby="mode-title"><h2 id="mode-title">Сменить режим?</h2><p>Текущий расчёт со всеми данными и черновиками будет сохранён отдельной копией в истории. В этом расчёте останутся только имена участников: расходы, суммы и переводы начнутся с нуля. Автоматического преобразования взносов в позиции нет.</p><div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Отмена</button><button id="confirm-mode" class="primary-button" type="button">Сохранить копию и сменить</button></div></dialog>
   <script src="core.js" defer></script>
+  <script src="items-core.js" defer></script>
   <script src="history.js" defer></script>
+  <script src="items-ui.js" defer></script>
   <script src="script.js" defer></script>
   <script src="pwa.js" defer></script>
 </body>

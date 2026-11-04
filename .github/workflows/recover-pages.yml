@@ -1,0 +1,57 @@
+name: Recover stuck Split Pages deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recover-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: github-pages-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release stuck Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This exact Pages deployment was left pending after a timeout.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/41895222482/force-cancel" || echo "The older Actions run was not cancellable."
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/deployments/563e876a682e1f3bcd95848dc376b3e423e800f0/cancel"
+  build:
+    needs: recover
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare static Split files
+        run: |
+          mkdir -p _site/icons
+          cp index.html style.css script.js core.js pwa.js sw.js manifest.json _site/
+          cp -R icons/. _site/icons/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy recovered Split 3.0
+        id: deployment
+        uses: actions/deploy-pages@v4

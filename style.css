@@ -320,3 +320,23 @@ input[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 2px var
  .secondary-button { min-height: 48px; } #add-person, #add-transfer { width: 100%; } .data-bar { flex-wrap: wrap; }
 }
 @supports not (backdrop-filter: blur(1px)) { .panel { background: var(--surface-strong); } }
+
+/* History shares the calculator's Dark Glass surfaces and theme tokens. */
+[hidden] { display: none !important; }
+.history-actions { display:flex; flex-wrap:wrap; gap:10px; margin:16px 0; }
+.history-actions > * { width:auto; min-height:44px; }
+.history-list { display:grid; gap:18px; margin:24px 0; }
+.history-card { padding:24px; min-width:0; }
+.history-card h2, .editor-title, #delete-name, #import-preview li { overflow-wrap:anywhere; }
+.history-card time { display:block; margin-top:10px; color:var(--muted); font-size:14px; }
+.editor-title { margin:20px 0; }
+.import-label { position:relative; cursor:pointer; }
+.import-label input { position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
+.import-label:focus-within { outline:2px solid currentColor; outline-offset:3px; }
+#rename-name { width:100%; min-height:48px; font-size:16px; margin:12px 0; padding:10px; }
+#import-dialog { max-height:85dvh; overflow:auto; }
+#import-preview ul { padding-left:22px; max-height:35dvh; overflow:auto; }
+@media (max-width:500px) { .history-card { padding:18px; } .history-actions > * { flex:1 1 140px; } }
+#import-file { font-size:16px; }
+
+#delete-dialog, #import-dialog { padding:27px; }

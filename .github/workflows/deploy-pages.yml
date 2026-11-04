@@ -8,6 +8,7 @@ on:
       - 'style.css'
       - 'script.js'
       - 'core.js'
+      - 'history.js'
       - 'pwa.js'
       - 'sw.js'
       - 'manifest.json'
@@ -33,7 +34,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p _site/icons
-          cp index.html style.css script.js core.js pwa.js sw.js manifest.json _site/
+          cp index.html style.css script.js core.js history.js pwa.js sw.js manifest.json _site/
           cp -R icons/. _site/icons/
           touch _site/.nojekyll
       - name: Configure Pages

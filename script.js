@@ -27,7 +27,11 @@
     resetDialog: $('#reset-dialog')
   };
 
-  const STORAGE_KEY = 'split-state-v2';
+  const STORAGE_KEY = SplitHistory.KEY;
+  const history = new SplitHistory.Store({getItem:key => localStorage.getItem(key), setItem:(key,value) => localStorage.setItem(key,value)});
+  let active = null;
+  let pendingImport = null;
+  let importGeneration = 0;
   const THEME_KEY = 'split-theme';
   const DEFAULT_STATE = () => ({
     target: '',
@@ -38,7 +42,6 @@
   let toastTimer = null;
   let lastReport = '';
   let drafts = {};
-  let savedSnapshot = null;
   let recoveryRaw = null;
   let storageBlocked = false;
   let saveFailed = false;
@@ -75,70 +78,28 @@
     try { toCents(raw); return true; } catch (_) { return false; }
   }
   function safeLoad() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      savedSnapshot = raw; recoveryRaw = raw;
-      let parsed;
-      const legacy = !raw && (localStorage.getItem('people') || localStorage.getItem('transfers'));
-      if (raw) parsed = JSON.parse(raw);
-      else if (legacy) {
-        recoveryRaw = JSON.stringify({people: localStorage.getItem('people'), transfers: localStorage.getItem('transfers'), target: localStorage.getItem('target')});
-        parsed = {people: JSON.parse(localStorage.getItem('people') || '[]'), transfers: JSON.parse(localStorage.getItem('transfers') || '[]'), target: localStorage.getItem('target') || ''};
-        if (Array.isArray(parsed.people) && !parsed.people.length) parsed.people = DEFAULT_STATE().people;
-      } else return;
-      if (!parsed || !Array.isArray(parsed.people) || !parsed.people.length || parsed.people.length > 100 || !Array.isArray(parsed.transfers) || parsed.transfers.length > 500) throw new Error('Invalid saved state');
-      const ids = new Set();
-      const uniqueId = value => {
-        const id = typeof value === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(value) && !ids.has(value) ? value : uid();
-        ids.add(id); return id;
-      };
-      const restored = {
-        target: String(parsed.target ?? ''),
-        people: parsed.people.map(p => {
-          if (!p || typeof p !== 'object') throw new Error('Invalid person');
-          return {id: uniqueId(p.id), name: String(p.name ?? '').slice(0,80), paid: toCents(p.paid ?? 0) / 100};
-        }),
-        transfers: parsed.transfers.map(t => {
-          if (!t || typeof t !== 'object') throw new Error('Invalid transfer');
-          const from = Number(t.from), to = Number(t.to);
-          if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= parsed.people.length || to >= parsed.people.length || from === to) throw new Error('Invalid transfer');
-          return {id: uniqueId(t.id), from, to, amount: toCents(t.amount ?? 0) / 100};
-        })
-      };
-      state = restored;
-      const keys = new Set(['target', ...state.people.map(p => `paid-${p.id}`), ...state.transfers.map(t => `transfer-${t.id}`)]);
-      drafts = {};
-      if (parsed.drafts && typeof parsed.drafts === 'object') {
-        for (const [key,value] of Object.entries(parsed.drafts)) if (keys.has(key) && typeof value === 'string' && !validMoney(value)) drafts[key] = value;
-      }
-      if (!validMoney(state.target)) { drafts.target = state.target; state.target = ''; }
-      if (legacy) persist(false);
-      recoveryRaw = null;
-    } catch (error) {
-      state = DEFAULT_STATE(); drafts = {}; storageBlocked = true;
-      storageStatus('Не удалось прочитать данные. Скачайте исходную копию перед сбросом.', true);
-    }
+    try { history.load(); storageStatus('История сохранена на устройстве'); }
+    catch (_) { storageBlocked = true; recoveryRaw = history.recovery; storageStatus('Не удалось прочитать или сохранить историю. Скачайте исходную копию. Данные не перезаписаны.',true); }
+  }
+  function currentRecord() {
+    return active ? {...active,state:{...state,drafts}} : null;
+  }
+  function storageError(error) {
+    saveFailed = true; storageBlocked = history.blocked;
+    storageStatus(error.message + ' Скачайте копию до закрытия страницы.',true);
   }
   function persist(shouldRender = true) {
-    if (!storageBlocked) {
+    if (active) {
+      active.updatedAt = SplitHistory.now();
       try {
-        if (localStorage.getItem(STORAGE_KEY) !== savedSnapshot) {
-          storageBlocked = true;
-          storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.', true);
-        } else {
-          const serialized = JSON.stringify({...state, drafts});
-          localStorage.setItem(STORAGE_KEY, serialized); savedSnapshot = serialized; saveFailed = false;
-          storageStatus('Сохранено на устройстве');
-        }
-      } catch (_) {
-        saveFailed = true;
-        storageStatus('Не удалось сохранить. Скачайте копию до закрытия страницы.', true);
-      }
+        history.put(currentRecord()); saveFailed = false;
+        storageStatus('Сохранено на устройстве');
+      } catch (error) { storageError(error); }
     }
     if (shouldRender) renderAll();
   }
   function bindMoney(input, key, value, onValue) {
-    input.type = 'text'; input.inputMode = 'decimal'; input.autocomplete = 'off'; input.enterKeyHint = 'done';
+    input.type = 'text'; input.maxLength = 1000; input.inputMode = 'decimal'; input.autocomplete = 'off'; input.enterKeyHint = 'done';
     input.value = Object.hasOwn(drafts,key) ? drafts[key] : String(value || '');
     const error = el('span','field-error'); error.id = `error-${key}`; error.setAttribute('aria-live','polite');
     input.setAttribute('aria-describedby',error.id);
@@ -421,8 +382,7 @@
     els.transfers.lastElementChild?.querySelector('.transfer-amount')?.focus();
   }
   function resetAll() {
-    drafts = {}; storageBlocked = false; recoveryRaw = null;
-    try { savedSnapshot = localStorage.getItem(STORAGE_KEY); } catch (_) {}
+    drafts = {};
     state = DEFAULT_STATE();
     lastReport = '';
     persist();
@@ -483,14 +443,125 @@
     }
   });
 
-  $('#backup-btn').addEventListener('click', () => {
-    const blob = new Blob([recoveryRaw && storageBlocked ? recoveryRaw : JSON.stringify({...state,drafts},null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = 'split-backup.json'; link.click();
+  function download(raw, filename) {
+    const blob = new Blob([raw], {type:'application/json'});
+    const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = filename; link.click();
     setTimeout(() => URL.revokeObjectURL(url),1000);
+  }
+  function exportRecords(single = false) {
+    try {
+      if (recoveryRaw !== null && storageBlocked) { download(recoveryRaw,'split-recovery-original.json'); return; }
+      let values = history.list();
+      if (active) {
+        const current = currentRecord(), index = values.findIndex(r => r.id === current.id);
+        if (index < 0) values.push(current); else values[index] = current;
+      }
+      download(SplitHistory.encodeBackup(single && active ? [currentRecord()] : values), single ? 'split-calculation.json' : 'split-history.json');
+    } catch (error) { storageError(error); }
+  }
+  $('#backup-btn').addEventListener('click', () => exportRecords());
+  $('#export-history').addEventListener('click', () => exportRecords());
+  $('#export-current').addEventListener('click', () => exportRecords(true));
+
+  function action(label, fn, className = 'secondary-button') {
+    const button = el('button',className,label); button.type = 'button'; button.addEventListener('click',fn); return button;
+  }
+  function renderHistory() {
+    const list = $('#history-list'); list.replaceChildren();
+    const values = history.list().sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
+    $('#history-empty').hidden = values.length > 0;
+    for (const item of values) {
+      const card = el('article','panel history-card');
+      const title = el('h2','',item.name), date = el('time','',new Date(item.updatedAt).toLocaleString('ru-RU')); date.dateTime = item.updatedAt;
+      const buttons = el('div','history-actions');
+      buttons.append(action('Открыть',() => openRecord(item.id)), action('Переименовать',() => renameRecord(item)),
+        action('Дублировать',() => {
+          if (!canLeave()) return;
+          try { history.put({...item,id:uid(),name:(item.name + ' — копия').slice(0,120),updatedAt:SplitHistory.now()}); renderHistory(); storageStatus('Копия сохранена'); }
+          catch (e) { storageError(e); }
+        }), action('Экспорт JSON',() => download(SplitHistory.encodeBackup([item]),'split-calculation.json')),
+        action('Удалить',() => {
+          $('#delete-name').textContent = item.name;
+          $('#delete-dialog').dataset.recordId = item.id; $('#delete-dialog').showModal();
+        }));
+      card.append(title,date,buttons); list.append(card);
+    }
+  }
+  function canLeave() {
+    if (saveFailed || storageBlocked) { showToast('Скачайте копию и устраните ошибку хранения перед переходом.'); return false; }
+    return true;
+  }
+  function home() {
+    if (!canLeave()) return;
+    active = null; $('#home-screen').hidden = false; $('#editor-screen').hidden = true;
+    $('#reset-btn').hidden = true; $('.mobile-dock').hidden = true; $('.skip-link').href = '#history-heading'; renderHistory(); $('#history-heading').focus();
+  }
+  function openRecord(id) {
+    if (!canLeave()) return;
+    const item = history.list().find(r => r.id === id); if (!item) return;
+    active = item; state = SplitHistory.clone(item.state); drafts = state.drafts || {}; delete state.drafts;
+    $('#editor-title').textContent = item.name;
+    $('#home-screen').hidden = true; $('#editor-screen').hidden = false; $('#reset-btn').hidden = false; $('.mobile-dock').hidden = false;
+    $('.skip-link').href = '#setup-heading'; renderAll(); $('#setup-heading').focus();
+  }
+  function renameRecord(item) {
+    if (!canLeave()) return;
+    $('#rename-name').value = item.name; $('#rename-dialog').dataset.recordId = item.id; $('#rename-dialog').showModal();
+  }
+  $('#rename-form').addEventListener('submit',event => {
+    event.preventDefault(); const name = $('#rename-name').value.trim(); if (!name) return;
+    const item = history.list().find(r => r.id === $('#rename-dialog').dataset.recordId); if (!item) return;
+    try {
+      const updated = {...item,name,updatedAt:SplitHistory.now()}; history.put(updated);
+      if (active?.id === item.id) { active = updated; $('#editor-title').textContent = name; }
+      $('#rename-dialog').close(); renderHistory(); storageStatus('Название сохранено');
+    } catch (e) { storageError(e); }
+  });
+  $('#confirm-delete').addEventListener('click',() => {
+    if (!canLeave()) return;
+    try { history.remove($('#delete-dialog').dataset.recordId); $('#delete-dialog').close(); renderHistory(); storageStatus('Расчёт удалён'); }
+    catch (e) { storageError(e); }
+  });
+  $('#create-calculation').addEventListener('click',() => {
+    if (!canLeave()) return;
+    try {
+      const item = {id:uid(),name:'Новый расчёт',updatedAt:SplitHistory.now(),state:{...DEFAULT_STATE(),drafts:{}}};
+      history.put(item); openRecord(item.id);
+    } catch (e) { storageError(e); }
+  });
+  $('#back-history').addEventListener('click',home);
+  $('.brand').addEventListener('click',event => { event.preventDefault(); home(); });
+  $('#rename-current').addEventListener('click',() => { if (active) renameRecord(active); });
+  for (const button of document.querySelectorAll('[data-close-dialog]')) button.addEventListener('click',() => button.closest('dialog').close());
+  $('#import-file').addEventListener('change',async event => {
+    const file = event.target.files[0]; event.target.value = ''; pendingImport = null; $('#confirm-import').disabled = true;
+    if (!file) return;
+    const generation = ++importGeneration;
+    $('#import-dialog').showModal(); $('#import-preview').textContent = 'Чтение файла…';
+    try {
+      if (file.size > SplitHistory.MAX_BYTES) throw new Error('Файл больше 10 МБ.');
+      const raw = await file.text();
+      if (generation !== importGeneration) return;
+      const incoming = SplitHistory.decodeBackup(raw);
+      const plan = SplitHistory.planImport(history.recoveryList(),incoming);
+      const summary = el('p','',`Добавится: ${plan.added.length}. Уже есть: ${plan.skipped.length}. Конфликты ID (будут копиями): ${plan.conflicts.length}. Существующие расчёты сохранятся.`);
+      if (history.loadFailed) summary.append(document.createTextNode(' Повреждённый оригинал будет сохранён отдельно на устройстве до восстановления. Рекомендуем также скачать исходную копию.'));
+      const list = el('ul'); for (const item of incoming) list.append(el('li','',`${item.name} · ${new Date(item.updatedAt).toLocaleString('ru-RU')} · ${item.state.people.length} участн.`));
+      $('#import-preview').replaceChildren(summary,list); pendingImport = incoming; $('#confirm-import').disabled = false;
+    } catch (_) { if (generation !== importGeneration) return; $('#import-preview').textContent = 'Не удалось прочитать файл: неверный JSON, версия, данные или превышены лимиты. История не изменена.'; }
+  });
+  $('#import-dialog').addEventListener('close',() => { if (!$('#import-dialog').open) { pendingImport = null; importGeneration++; } });
+  $('#confirm-import').addEventListener('click',() => {
+    if (!pendingImport || (!history.loadFailed && !canLeave())) return;
+    try {
+      const plan = history.loadFailed ? history.recover(pendingImport) : history.restore(pendingImport);
+      storageBlocked = false; saveFailed = false; recoveryRaw = null; pendingImport = null; $('#import-dialog').close();
+      renderHistory(); storageStatus(`Восстановлено: ${plan.added.length}. Повторы пропущены: ${plan.skipped.length}.`);
+    } catch (e) { storageError(e); }
   });
   window.addEventListener('storage',event => {
-    if ((event.key === STORAGE_KEY || event.key === null) && event.newValue !== savedSnapshot) {
-      storageBlocked = true; storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.',true);
+    if ((event.key === STORAGE_KEY || event.key === null) && event.newValue !== history.snapshot) {
+      history.blocked = true; storageBlocked = true; storageStatus('Данные изменены в другой вкладке. Скачайте копию и перезагрузите страницу.',true);
     }
   });
   window.addEventListener('beforeunload',event => {
@@ -505,4 +576,6 @@
     else setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
   } catch (_) {}
   renderAll();
+  $('#reset-btn').hidden = true; $('.mobile-dock').hidden = true;
+  renderHistory();
 })();

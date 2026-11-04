@@ -27,7 +27,7 @@
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#setup-heading">Перейти к расчёту</a>
+  <a class="skip-link" href="#history-heading">Перейти к истории</a>
   <noscript><p class="notice">Для расчётов включите JavaScript. Данные остаются на устройстве.</p></noscript>
   <div class="ambient ambient-one" aria-hidden="true"></div>
   <div class="ambient ambient-two" aria-hidden="true"></div>
@@ -49,6 +49,26 @@
       </div>
     </header>
 
+    <section id="home-screen" aria-labelledby="history-heading">
+      <div class="intro"><div class="eyebrow">SPLIT 4.0 · НА ЭТОМ УСТРОЙСТВЕ</div>
+        <h1 id="history-heading" tabindex="-1">Мои расчёты<span class="title-period">.</span></h1>
+        <p>Сохраняйте общие расходы и возвращайтесь к ним в любое время.</p>
+      </div>
+      <div class="history-actions">
+        <button class="primary-button" id="create-calculation" type="button">Новый расчёт</button>
+        <button class="secondary-button" id="export-history" type="button">Экспорт всей истории</button>
+        <label class="secondary-button import-label">Импорт JSON<input id="import-file" type="file" accept=".json,application/json"></label>
+      </div>
+      <p id="history-empty" class="notice">Расчётов пока нет. Создайте первый или восстановите JSON-копию.</p>
+      <div id="history-list" class="history-list"></div>
+    </section>
+    <div id="editor-screen" hidden>
+      <div class="history-actions editor-navigation">
+        <button id="back-history" class="secondary-button" type="button">← Мои расчёты</button>
+        <button id="rename-current" class="secondary-button" type="button">Переименовать</button>
+        <button id="export-current" class="secondary-button" type="button">Экспорт расчёта</button>
+      </div>
+      <h2 id="editor-title" class="editor-title"></h2>
     <section class="intro">
       <div class="eyebrow"><span class="eyebrow-line"></span>ОБЩИЕ РАСХОДЫ БЕЗ ПУТАНИЦЫ</div>
       <h1>Разделить счёт<span class="title-period">.</span></h1>
@@ -180,7 +200,8 @@
       </section>
     </div>
 
-    <footer class="app-footer"><span>split<span class="footer-dot">.</span> <span>Просто и честно делим общие расходы.</span></span><span>Версия 3.0 · Работает локально</span></footer>
+    </div>
+    <footer class="app-footer"><span>split<span class="footer-dot">.</span> <span>Просто и честно делим общие расходы.</span></span><span>Версия 4.0 · Работает локально</span></footer>
   </main>
 
   <div class="data-bar" aria-label="Состояние данных">
@@ -201,7 +222,22 @@
       </div>
     </form>
   </dialog>
+  <dialog id="rename-dialog" class="confirm-dialog" aria-labelledby="rename-title">
+    <form id="rename-form"><h2 id="rename-title">Название расчёта</h2>
+      <label for="rename-name">Название</label><input id="rename-name" maxlength="120" required>
+      <div class="dialog-actions"><button type="button" class="secondary-button" data-close-dialog>Отмена</button><button class="primary-button" type="submit">Сохранить</button></div>
+    </form>
+  </dialog>
+  <dialog id="delete-dialog" class="confirm-dialog" aria-labelledby="delete-title">
+    <h2 id="delete-title">Удалить расчёт?</h2><p id="delete-name"></p><p>Удаление с устройства необратимо. При необходимости сначала экспортируйте JSON.</p>
+    <div class="dialog-actions"><button type="button" class="secondary-button" data-close-dialog>Отмена</button><button type="button" class="primary-button" id="confirm-delete">Удалить</button></div>
+  </dialog>
+  <dialog id="import-dialog" class="confirm-dialog" aria-labelledby="import-title">
+    <h2 id="import-title">Восстановление из JSON</h2><div id="import-preview" role="status"></div>
+    <div class="dialog-actions"><button type="button" class="secondary-button" data-close-dialog>Отмена</button><button type="button" class="primary-button" id="confirm-import" disabled>Подтвердить восстановление</button></div>
+  </dialog>
   <script src="core.js" defer></script>
+  <script src="history.js" defer></script>
   <script src="script.js" defer></script>
   <script src="pwa.js" defer></script>
 </body>

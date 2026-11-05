@@ -1,0 +1,37 @@
+name: Web regression tests
+on:
+  push:
+    branches: [feature/capacitor]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Install Chromium
+        run: npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Test built web app
+        shell: bash
+        run: |
+          export PLAYWRIGHT_MODULE="$PWD/node_modules/playwright-core"
+          export AXE_MODULE="$PWD/node_modules/axe-core"
+          export CHROMIUM_PATH="$(node -e "console.log(require('playwright-core').chromium.executablePath())")"
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory www > /tmp/split-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/ > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/ > /dev/null
+          npm run test:browser

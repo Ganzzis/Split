@@ -1,0 +1,25 @@
+{
+  "name": "split",
+  "version": "4.0.0",
+  "private": true,
+  "description": "Split offline expense calculator and Capacitor shells",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test --test-isolation=none tests/core.test.cjs tests/history.test.cjs tests/items.test.cjs tests/reports.test.cjs tests/build.test.cjs",
+    "test:browser": "node tests/browser.cjs && node tests/accessibility.cjs && node tests/history-browser.cjs && node tests/items-browser.cjs && node tests/navigation.cjs && node tests/share-browser.cjs && node tests/pwa-update.cjs",
+    "cap:sync": "npm run build && cap sync",
+    "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "ios:open": "npm run cap:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "axe-core": "4.11.0",
+    "playwright-core": "1.56.1"
+  }
+}

@@ -94,7 +94,7 @@ PNG создаётся браузерным Canvas, без CDN, HTML-снимк�
 
 ## Граница платформы / будущий Capacitor
 
-`history.js` содержит схему, миграцию, импорт/экспорт и `Store`, принимающий адаптер `getItem`/`setItem`. Модуль работает в браузере и Node.js, не зависит от DOM, файлового диалога или Capacitor. В `script.js` адаптер подключает localStorage, а интерфейс занимается навигацией и файловыми диалогами. `core.js` отвечает за простой режим, `items-core.js` — за денежные правила позиций и проведение компенсаций, `items-ui.js` — за редактор позиций. Эти модули не требуют Capacitor. Это позволяет отдельно заменить хранение и нативный файловый обмен; асинхронный нативный адаптер потребует асинхронной координации операций и сохранения контроля конфликтов. Сам Capacitor и нативные зависимости пока не добавлены.
+`history.js` содержит схему, миграцию, импорт/экспорт и `Store`, принимающий адаптер `getItem`/`setItem`. Модуль работает в браузере и Node.js, не зависит от DOM, файлового диалога или Capacitor. В `script.js` адаптер подключает localStorage, а интерфейс занимается навигацией и файловыми диалогами. `core.js` отвечает за простой режим, `items-core.js` — за денежные правила позиций и проведение компенсаций, `items-ui.js` — за редактор позиций. Эти модули не зависят от Capacitor. Это позволяет отдельно заменить хранение и нативный файловый обмен; асинхронный нативный адаптер потребует асинхронной координации операций и сохранения контроля конфликтов. Capacitor 8.6.0 и нативные оболочки добавлены на этапе 5; системные адаптеры хранения и Share/Files остаются отдельным этапом.
 
 ## Структура
 
@@ -155,3 +155,69 @@ node tests/pwa-update.cjs
 При каждом изменении оболочки увеличивайте версию `CACHE_NAME` в `sw.js`; обязательные ресурсы добавляйте в `SHELL`. Установка нового worker завершается только после полной загрузки ресурсов. До принятия обновления работает прежняя версия. Кнопка обновления не действует при ошибке сохранения. Автоматической перезагрузки редактируемой формы нет.
 
 После активации удаляются прежние кэши Split, кэши других приложений сохраняются. Пользовательские данные находятся отдельно в localStorage. При изменении встроенного скрипта темы обновите SHA-256 в CSP `index.html`.
+
+
+## Этап 5 — Capacitor: Android и iOS
+
+Веб-версия остаётся обычным статическим сайтом без сборки для запуска из корня.
+Нативные оболочки используют **Capacitor 8.6.0**, app ID `io.github.ganzzis.split`, имя Split.
+Требования: Node.js 22+ (CI: 24), JDK 21, Android SDK Platform 36 / Build Tools 36.0.0;
+Android 7.0/API 24+. Для iOS: macOS, Xcode 26+ (CI: 26.3), iOS 16+; зависимости через Swift Package Manager, CocoaPods не нужен.
+
+```sh
+npm ci
+npm test
+npm run build       # чистый www/, только ресурсы приложения
+npm run cap:sync    # build + синхронизация обоих нативных проектов
+npm run android:debug
+# Android SDK должен быть доступен через ANDROID_HOME либо android/local.properties
+```
+
+Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
+Установка на подключённый Android: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+Это отладочная подпись, не release/AAB для магазина. Для обновления существующей установки нужна та же подпись;
+ключ debug из CI может отличаться от локального. Перед переустановкой с удалением приложения сохраните JSON-копию.
+
+На Mac:
+
+```sh
+npm ci
+npm run cap:sync
+xcodebuild -project ios/App/App.xcodeproj -scheme App \
+  -configuration Debug -sdk iphonesimulator \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build
+# Или npm run ios:open
+```
+
+`ios/DerivedData/Build/Products/Debug-iphonesimulator/App.app` — приложение Simulator,
+не подписанный IPA для iPhone. Для физического iPhone требуется настройка команды/подписи в Xcode.
+Linux-среда не собирает iOS: воспроизводимая проверка вынесена в macOS CI.
+
+### Получение артефактов из GitHub Actions
+
+После push в `feature/capacitor` автоматически запускаются:
+
+- [Android debug APK](https://github.com/Ganzzis/Split/actions/workflows/android-debug.yml): `npm ci`, тесты, sync, `assembleDebug`; в успешном запуске скачайте artifact `split-android-debug-<SHA>`, распакуйте `app-debug.apk`.
+- [iOS Simulator build](https://github.com/Ganzzis/Split/actions/workflows/ios-simulator.yml): macOS 15 / Xcode 26.3, unsigned Simulator build; artifact `split-ios-simulator-<SHA>` содержит `Split-Simulator.zip` с `App.app`.
+- [Web regression tests](https://github.com/Ganzzis/Split/actions/workflows/web-tests.yml): тесты расчётов/сборки и браузерные проверки собранного `www`.
+
+Артефакты хранятся 14 дней; для скачивания требуется вход в GitHub с доступом к репозиторию.
+Эти workflow также выполняются для pull request и поддерживают ручной запуск, когда workflow доступен GitHub.
+Workflow публикации Pages не изменён: push в feature-ветку сайт не публикует.
+
+### Данные, офлайн и границы этапа
+
+Нативная оболочка загружает ресурсы из установленного пакета без сети, без `server.url`.
+Service worker запускается только в браузере; в native весь пакет обновляется вместе с приложением.
+Веб-PWA сохраняет кэш, установку и офлайн-обновления.
+Математика, история, схемы JSON, Dark Glass и веб-обмен остаются общими.
+`localStorage` не очищается, не переименовывается и не мигрирует в нативное хранилище.
+Хранилища сайта, Android и iOS относятся к разным origin/контейнерам: автоматического переноса с сайта нет;
+сохраните JSON на сайте и используйте существующий импорт там, где WebView поддерживает файловый выбор.
+Идентификатор приложения и origin нельзя менять без отдельного плана сохранения данных.
+
+Системные Share/Files и нативное хранилище не подключены. Web Share/Clipboard зависят от WebView;
+текст/PNG и существующий fallback-интерфейс сохранены, но сохранение файла или вызов системного обмена
+на Android/iOS не считается проверенным до теста на устройстве и следующего этапа адаптеров.
+Не удаляйте приложение без резервной копии: удаление удаляет его localStorage.

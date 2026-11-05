@@ -3,7 +3,10 @@
  const banner = document.querySelector('#update-banner'), button = document.querySelector('#update-btn');
  let waitingWorker, requestedUpdate = false;
  const showUpdate = worker => { waitingWorker = worker; banner.hidden = false; };
- if ('serviceWorker' in navigator && window.isSecureContext) {
+ // Native shells load bundled assets offline; app updates replace the whole bundle.
+ // Keep browser PWA caching separate from the native WebView origin.
+ const native = window.Capacitor?.isNativePlatform?.() === true;
+ if (!native && 'serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load',async () => {
    try {
     const registration = await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});

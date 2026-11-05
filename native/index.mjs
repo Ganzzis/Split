@@ -21,7 +21,7 @@ if (Capacitor.isNativePlatform()) {
   }
  }).catch(() => {});
  const notify = async message => {
-  const toast = document.createElement('div'); toast.className = 'native-notice'; toast.setAttribute('role','status'); toast.textContent = message; document.body.append(toast); setTimeout(() => toast.remove(),5000);
+  const toast = document.createElement('div'); toast.className = 'native-notice'; toast.setAttribute('role','status'); toast.textContent = message; (document.querySelector('dialog[open]:not(.native-proxied)') || document.body).append(toast); setTimeout(() => toast.remove(),5000);
  };
  const base64 = blob => new Promise((resolve, reject) => {
   const reader = new FileReader(); reader.onerror = reject;

@@ -4,10 +4,17 @@ final class SplitVisualTests: XCTestCase {
     let longTitle = "Большое путешествие с друзьями — Санкт-Петербург и Карелия"
     func fixture() -> String {
         let records: [[String: Any]] = (0..<24).map { index in
-            ["id": "fixture-\(index)", "name": index == 0 ? longTitle : "Встреча с друзьями · \(index)", "updatedAt": "2026-11-06T12:00:00.000Z",
-             "state": ["target": "", "people": [["id": "p1", "name": "Анна", "paid": 12345.67], ["id": "p2", "name": "Борис", "paid": 0]], "transfers": [], "drafts": [:]]]
+            let people: [[String: Any]] = [["id": "p1", "name": "Анна", "paid": index == 0 ? 0 : 12345.67], ["id": "p2", "name": "Борис", "paid": 0]]
+            var state: [String: Any] = ["target": "", "people": people, "transfers": [], "drafts": [:]]
+            if index == 0 {
+                state["mode"] = "items"; state["payments"] = []
+                state["expenses"] = (0..<32).map { number -> [String: Any] in
+                    ["id": "expense-\(number)", "title": "Кофе, прогулки и общие планы · \(number+1)", "amount": "450.01", "payerId": "p1", "split": "equal", "shares": [["personId": "p1", "value": ""], ["personId": "p2", "value": ""]]]
+                }
+            }
+            return ["id": "fixture-\(index)", "name": index == 0 ? longTitle : "Встреча с друзьями · \(index)", "updatedAt": "2026-11-06T12:00:00.000Z", "state": state]
         }
-        return String(data: try! JSONSerialization.data(withJSONObject: ["version": 4, "legacyMigrated": true, "records": records]), encoding: .utf8)!
+        return String(data: try! JSONSerialization.data(withJSONObject: ["version": 5, "legacyMigrated": true, "records": records]), encoding: .utf8)!
     }
     func capture(_ app: XCUIApplication, _ name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
@@ -27,6 +34,7 @@ final class SplitVisualTests: XCTestCase {
         let results = app.buttons["native-tab-results"]
         XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: results); waitForExpectations(timeout: 10)
         capture(app, "\(theme)-03-calculation-long-title")
+        app.webViews.firstMatch.swipeUp(); capture(app, "\(theme)-03b-long-expense-list")
         app.buttons["native-actions"].tap(); app.buttons["Переименовать"].tap()
         let field = app.textFields["Название расчёта"]
         XCTAssertTrue(field.waitForExistence(timeout: 10)); field.tap()
@@ -45,7 +53,8 @@ final class SplitVisualTests: XCTestCase {
         capture(app, "\(theme)-06-share-preview")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
-        sleep(2)
+        let nativeCopy = app.buttons.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
+        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
         capture(app, "\(theme)-07-system-share")
         app.terminate()
     }

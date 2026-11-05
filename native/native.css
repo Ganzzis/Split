@@ -56,3 +56,7 @@ html.split-native {--native-vh:100dvh;--native-top:env(safe-area-inset-top,0px);
 @media(max-width:360px){.ios-native-chrome .create-card{grid-template-columns:1fr;}.ios-native-chrome .create-card>button{width:100%;}}
 
 .ios-native-chrome #editor-title {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+
+.ios-native-chrome .expense-card {background:var(--surface-strong);border:1px solid var(--border);border-radius:22px;padding:18px;margin-block:12px;box-shadow:0 3px 18px #160d2a05;}
+.ios-native-chrome .expense-card h3 {font-size:18px;font-weight:650;letter-spacing:-.3px;}
+.ios-native-chrome .expense-amount {font-size:27px;letter-spacing:-.8px;font-variant-numeric:tabular-nums;}

@@ -13,9 +13,12 @@ target.build_configurations.each do |config|
   config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
   config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
 end
+project.root_object.attributes['TargetAttributes'] ||= {}
+project.root_object.attributes['TargetAttributes'][target.uuid] = { 'TestTargetID' => app.uuid }
 project.save
 scheme = Xcodeproj::XCScheme.new
 scheme.add_build_target(app)
 scheme.add_build_target(target)
 scheme.add_test_target(target)
+scheme.set_launch_target(app)
 scheme.save_as('ios/App/App.xcodeproj', 'SplitVisualTests', true)

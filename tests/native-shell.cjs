@@ -36,6 +36,7 @@ const assert = require('node:assert/strict');
   await page.locator('#share-download-png').click();
   await page.waitForFunction(count => calls.filter(c => c.plugin === 'Share' && c.method === 'share').length > count, shareCount);
   assert.equal(await page.evaluate(() => calls.filter(c => c.plugin === 'Share' && c.method === 'share').at(-1).data.files.length), 1);
+  assert.match(await page.evaluate(() => calls.find(c => c.plugin === 'Filesystem' && c.method === 'writeFile').data.data), /^iVBORw0KGgo/);
   console.log('PASS: selected PNG delivery works with blob fetch blocked; no CSP-dependent refetch');
   await page.evaluate(() => listeners['Keyboard.keyboardWillShow']({ keyboardHeight: 300 }));
   assert.equal(await page.locator('.mobile-dock').isVisible(), false);

@@ -15,6 +15,14 @@ final class SplitChromeModel: ObservableObject {
     var action: ((String, String?) -> Void)?
 }
 
+struct SplitTabPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+}
+
 struct SplitFloatingTabs: View {
     @ObservedObject var model: SplitChromeModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -40,7 +48,7 @@ struct SplitFloatingTabs: View {
                     }
                     .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SplitTabPressStyle())
                 .disabled(tab.0 != "history" && !model.hasCurrent)
                 .opacity(tab.0 != "history" && !model.hasCurrent ? 0.4 : 1)
                 .accessibilityLabel(tab.1)

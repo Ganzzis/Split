@@ -158,6 +158,21 @@ public class SplitChromePlugin: CAPPlugin, CAPBridgedPlugin, UIAdaptivePresentat
     }
 }
 
+final class SplitRootController: UIViewController {
+    private let navigation = UINavigationController(rootViewController: SplitViewController())
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        navigation.setNavigationBarHidden(true, animated: false)
+        addChild(navigation); view.addSubview(navigation.view); navigation.didMove(toParent: self)
+        navigation.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            navigation.view.topAnchor.constraint(equalTo: view.topAnchor), navigation.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            navigation.view.leadingAnchor.constraint(equalTo: view.leadingAnchor), navigation.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+    }
+    override var childForStatusBarStyle: UIViewController? { navigation }
+}
+
 extension SplitViewController {
     func updateChrome(plugin: SplitChromePlugin, section: String, title: String, hasCurrent: Bool, dark: Bool, modal: Bool, scrolled: Bool) {
         chromeModel.section = section; chromeModel.hasCurrent = hasCurrent
@@ -166,7 +181,7 @@ extension SplitViewController {
         navigationController?.overrideUserInterfaceStyle = overrideUserInterfaceStyle
         floatingHost?.overrideUserInterfaceStyle = overrideUserInterfaceStyle
         navigationController?.setNavigationBarHidden(false, animated: false)
-        if floatingHost == nil, let owner = navigationController {
+        if floatingHost == nil, let owner = navigationController?.parent {
             let parent = owner.view!
             edgesForExtendedLayout = []
             let host = UIHostingController(rootView: SplitFloatingTabs(model: chromeModel))

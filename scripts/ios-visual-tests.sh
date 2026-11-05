@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ruby scripts/add-ios-visual-tests.rb
+trap 'xcrun xcresulttool export attachments --path ios/visual-artifacts/Visual.xcresult --output-path ios/visual-artifacts/screenshots || true' EXIT
 mkdir -p ios/visual-artifacts
 sim_id=$(python3 - <<'PY'
 import json,subprocess
@@ -15,7 +16,6 @@ xcrun simctl boot "$sim_id" || true
 xcrun simctl bootstatus "$sim_id" -b
 xcrun simctl status_bar "$sim_id" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
 xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
-  -configuration Debug -destination "platform=iOS Simulator,id=$sim_id" \
+  -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$sim_id" \
   -derivedDataPath ios/VisualDerivedData -resultBundlePath ios/visual-artifacts/Visual.xcresult \
   CODE_SIGNING_ALLOWED=NO test
-xcrun xcresulttool export attachments --path ios/visual-artifacts/Visual.xcresult --output-path ios/visual-artifacts/screenshots

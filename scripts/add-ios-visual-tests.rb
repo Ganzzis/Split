@@ -7,6 +7,7 @@ group = project.main_group.new_group('VisualTests', '../VisualTests')
 file = group.new_file('SplitVisualTests.swift')
 target.source_build_phase.add_file_reference(file)
 target.build_configurations.each do |config|
+  config.build_settings['PRODUCT_NAME'] = '$(TARGET_NAME)'
   config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'io.github.ganzzis.split.visualtests'
   config.build_settings['TEST_TARGET_NAME'] = 'App'
   config.build_settings['SWIFT_VERSION'] = '5.0'

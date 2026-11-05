@@ -17,5 +17,5 @@ xcrun simctl bootstatus "$sim_id" -b
 xcrun simctl status_bar "$sim_id" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
 xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
   -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$sim_id" \
-  -derivedDataPath ios/VisualDerivedData -resultBundlePath ios/visual-artifacts/Visual.xcresult \
+  -derivedDataPath ios/DerivedData -resultBundlePath ios/visual-artifacts/Visual.xcresult \
   CODE_SIGNING_ALLOWED=NO test

@@ -124,3 +124,26 @@ PWA-тест теперь берёт исходную версию кэша из
 восстановление JSON после удаления. Тактильный отклик проверяется физически.
 Сборка IPA не доказывает его подпись или установку; сертификаты и provisioning — вне репозитория.
 Нативные скриншоты/тест на физическом iPhone и повторный тест на Xiaomi пока не выполнены.
+
+
+## Split 4.2 — нативная навигация и визуальная регрессия iPhone
+
+- `npm test`: существующая математика/история/JSON и транспорт native adapters.
+- `tests/native-shell.cjs`: Android bridge, выбранная PNG при запрещённом blob-fetch,
+  клавиатура/Back, размеры sheets и восстановление.
+- `tests/ios-chrome.cjs`: native handshake, отсутствие одновременно видимых HTML
+  header/tab bar, отмена создания без записи, native rename без изменения денег,
+  подтверждённая навигация, тема и отказ перехода при ошибке localStorage.
+- `ios/VisualTests/SplitVisualTests.swift`: настоящий XCTest/WKWebView/UIKit/SwiftUI
+  на iOS 26 Simulator; fixture из 24 расчётов, длинное название, обе темы,
+  прокрутка, нативная клавиатура/rename, результаты и UIActivityViewController.
+- `scripts/ios-visual-tests.sh`: добавляет test target только в рабочую копию CI,
+  выбирает доступный iPhone Simulator iOS 26, запускает UI suite и экспортирует
+  screenshots из xcresult. Исходный Xcode app target остаётся в репозитории.
+- Web/PWA и Android CI выполняются отдельно; API математики и формат JSON не меняются.
+
+Скриншоты Simulator дают визуальное свидетельство настоящих системных панелей;
+они не доказывают поведение Dynamic Island/стекла/Share на физическом устройстве.
+Обязателен повторный ручной прогон Xiaomi (текст, 1 PNG, несколько PNG, отмена)
+и iPhone/GBox (подпись, запуск, Share/Files, VoiceOver, крупный текст, Reduce Motion,
+Reduce Transparency, Home Indicator, landscape и клавиатура).

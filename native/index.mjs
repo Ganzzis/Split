@@ -1,3 +1,4 @@
+import { installIOSChrome } from './ios-chrome.mjs';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -13,12 +14,15 @@ if (Capacitor.isNativePlatform()) {
  const html = document.documentElement;
  html.classList.add('split-native');
  html.dataset.platform = Capacitor.getPlatform();
+ if (Capacitor.getPlatform() === 'ios') installIOSChrome({ Chrome: registerPlugin('SplitChrome'), document, window }).catch(() => {});
  Filesystem.readdir({ path: 'split-share', directory: Directory.Cache }).then(async ({ files }) => {
   for (const file of files) if (/^[a-f0-9-]+-\d+\.png$/.test(file.name) && file.mtime && Date.now() - file.mtime > 86400000) {
    await Filesystem.deleteFile({ path: `split-share/${file.name}`, directory: Directory.Cache }).catch(() => {});
   }
  }).catch(() => {});
- const notify = message => Dialog.alert({ title: 'Split', message });
+ const notify = async message => {
+  const toast = document.createElement('div'); toast.className = 'native-notice'; toast.setAttribute('role','status'); toast.textContent = message; document.body.append(toast); setTimeout(() => toast.remove(),5000);
+ };
  const base64 = blob => new Promise((resolve, reject) => {
   const reader = new FileReader(); reader.onerror = reject;
   reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.readAsDataURL(blob);
@@ -93,7 +97,7 @@ if (Capacitor.isNativePlatform()) {
  // TXT/PNG save links in the native shell use system delivery, never inert download links.
  document.querySelector('#share-download-png').addEventListener('click', async event => {
   event.preventDefault();
-  try { const link = event.currentTarget; const blob = await (await fetch(link.href)).blob(); await SplitReports.adapter().share({ title: 'Split PNG', text: '', files: [new File([blob], link.download || 'split.png', { type: 'image/png' })] }); } catch (_) { await notify('Не удалось передать PNG. Повторите системный обмен.'); }
+  try { const file = SplitShareUI.selectedFile?.(); if (!file) throw Error('PNG not ready'); const result = await SplitReports.adapter().share({ title: 'Split PNG', text: '', files: [file] }); if (result.status === 'fallback') await notify(result.reason); } catch (_) { await notify('Не удалось передать PNG. Повторите системный обмен.'); }
  });
  document.querySelector('#share-download-png').textContent = 'Отправить эту PNG-страницу';
  document.querySelector('#share-open-png').hidden = true;

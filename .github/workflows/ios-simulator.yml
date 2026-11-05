@@ -28,6 +28,16 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           -derivedDataPath ios/DerivedData
           CODE_SIGNING_ALLOWED=NO build
+      - name: Prepare visual UI test tooling
+        run: gem install xcodeproj -v 1.27.0 --user-install --no-document
+      - name: iPhone Simulator visual and interaction regression
+        run: bash scripts/ios-visual-tests.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: split-ios-visual-${{ github.sha }}
+          path: ios/visual-artifacts/
+          if-no-files-found: warn
       - name: Archive simulator app
         run: ditto -c -k --keepParent ios/DerivedData/Build/Products/Debug-iphonesimulator/App.app Split-Simulator.zip
       - uses: actions/upload-artifact@v4

@@ -37,3 +37,4 @@ jobs:
           npm run test:browser
           npm run build:native
           node tests/native-shell.cjs
+          node tests/ios-chrome.cjs

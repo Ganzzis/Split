@@ -1,4 +1,6 @@
 import UIKit
+import SwiftUI
+import WebKit
 import Capacitor
 
 @UIApplicationMain
@@ -112,7 +114,21 @@ public class SplitDocumentsPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
 }
 
 class SplitViewController: CAPBridgeViewController {
+    let chromeModel = SplitChromeModel()
+    var floatingHost: UIHostingController<SplitFloatingTabs>?
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SplitDocumentsPlugin())
+        bridge?.registerPluginInstance(SplitChromePlugin())
+        #if DEBUG
+        // XCTest-only fixture on an isolated Simulator container. Never runs in normal launches.
+        if ProcessInfo.processInfo.arguments.contains("--split-ui-tests"),
+           let fixture = ProcessInfo.processInfo.environment["SPLIT_UI_TEST_FIXTURE"],
+           let encoded = try? JSONSerialization.data(withJSONObject: [fixture]),
+           let literal = String(data: encoded, encoding: .utf8) {
+            let theme = ProcessInfo.processInfo.environment["SPLIT_UI_TEST_THEME"] == "dark" ? "dark" : "light"
+            let source = "localStorage.setItem('split-history-v4', " + literal + "[0]); localStorage.setItem('split-theme', '" + theme + "');"
+            webView?.configuration.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        #endif
     }
 }

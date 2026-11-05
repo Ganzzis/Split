@@ -20,3 +20,39 @@ html.split-native {--native-vh:100dvh;--native-top:env(safe-area-inset-top,0px);
 .split-native.reduced-motion * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
 @keyframes split-native-in {from {opacity:0;transform:translateY(30px)} to {opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.split-native *{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
+.native-notice {position:fixed;z-index:2147483647;left:20px;right:20px;bottom:calc(108px + env(safe-area-inset-bottom));padding:16px 20px;border-radius:20px;background:var(--surface-strong);color:var(--text);box-shadow:0 8px 35px #0003;font-size:15px;pointer-events:none;}
+.ios-native-chrome .topbar,.ios-native-chrome .mobile-dock {display:none!important;}
+.ios-native-chrome .app-shell {padding-top:8px;max-width:760px;}
+.ios-native-chrome body {padding-bottom:110px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}
+.ios-native-chrome .ambient {display:none;}
+.ios-native-chrome .intro {padding:18px 4px 22px;}
+.ios-native-chrome .intro .eyebrow {display:none;}
+.ios-native-chrome #history-heading {font-size:clamp(30px,8vw,38px);font-weight:760;letter-spacing:-1.4px;line-height:1.1;}
+.ios-native-chrome .intro>p {font-size:16px;line-height:1.45;margin-top:12px;}
+.ios-native-chrome .panel {background:var(--surface-strong);backdrop-filter:none;-webkit-backdrop-filter:none;border:0;border-radius:25px;box-shadow:0 3px 18px #160d2a07;padding:20px;}
+.ios-native-chrome .create-card {display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;}
+.ios-native-chrome .create-heading {grid-column:1/-1;}
+.ios-native-chrome .create-card>button {border-radius:50px;padding:14px 20px;}
+.ios-native-chrome .create-card .mode-choice {min-width:0;font-size:13px;}
+.ios-native-chrome .history-card {margin-block:12px;border:1px solid var(--border);padding:20px;}
+.ios-native-chrome .history-card h3 {font-size:20px;font-weight:650;letter-spacing:-.45px;}
+.ios-native-chrome .history-card-sum {font-size:32px;font-weight:720;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+.ios-native-chrome .history-card-meta {font-size:14px;}
+.ios-native-chrome .compact-action {border-radius:50%;background:var(--input);min-width:46px;min-height:46px;}
+.ios-native-chrome .backup-actions {gap:8px;margin-block:20px;}
+.ios-native-chrome .backup-actions>* {font-size:13px;border-radius:18px;}
+.ios-native-chrome .native-tools {margin-top:28px;}
+.ios-native-chrome .native-tools button {font-size:13px;background:transparent;border:0;color:var(--muted);}
+.ios-native-chrome #editor-title {font-size:28px;letter-spacing:-.8px;overflow-wrap:anywhere;}
+.ios-native-chrome #back-history {display:none;}
+.ios-native-chrome .native-proxied {visibility:hidden!important;}
+.ios-native-chrome .native-proxied::backdrop {background:transparent;backdrop-filter:none;}
+@media(prefers-reduced-transparency:reduce){.ios-native-chrome *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}}
+
+.ios-native-chrome .editor-navigation {display:none;}
+.ios-native-chrome .mode-badge {font-size:12px;letter-spacing:.3px;}
+.ios-native-chrome input,.ios-native-chrome select {border-radius:15px;}
+@media(max-width:360px){.ios-native-chrome .create-card{grid-template-columns:1fr;}.ios-native-chrome .create-card>button{width:100%;}}
+
+.ios-native-chrome #editor-title {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}

@@ -549,7 +549,7 @@
   $('#create-calculation').addEventListener('click',() => {
     if (!canLeave()) return;
     try {
-      const item = {id:uid(),name:'Новый расчёт',updatedAt:SplitHistory.now(),state:$('#new-mode').value==='items'?freshItems(DEFAULT_STATE().people):{...DEFAULT_STATE(),drafts:{}}};
+      const item = {id:uid(),name:($('#create-calculation').dataset.nativeName || 'Новый расчёт').slice(0,120),updatedAt:SplitHistory.now(),state:$('#new-mode').value==='items'?freshItems(DEFAULT_STATE().people):{...DEFAULT_STATE(),drafts:{}}};
       history.put(item); openRecord(item.id);
     } catch (e) { storageError(e); }
   });

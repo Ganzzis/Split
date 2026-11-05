@@ -27,6 +27,7 @@
    const adapter=SplitReports.adapter();const supported=typeof adapter.supported==='function'?adapter.supported():true;$('share-system').disabled=!supported;
    if(!supported)status.textContent+=' Системный обмен не поддерживается: используйте кнопки ниже.';
   };
+  root.SplitShareUI.selectedFile=()=>files[Number($('share-page').value)||0]||null;
   $('share-page').onchange=showPage;
   $('share-system').onclick=async()=>{
    if(!snapshot)return;const token=generation;$('share-system').disabled=true;

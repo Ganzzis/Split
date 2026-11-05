@@ -12,7 +12,7 @@ with (app / 'Info.plist').open('rb') as stream:
 assert info['CFBundleIdentifier'] == 'io.github.ganzzis.split', info
 assert 'iPhoneOS' in info.get('CFBundleSupportedPlatforms', []), info
 assert 'arm64' in info.get('UIRequiredDeviceCapabilities', []), info
-assert info['CFBundleShortVersionString'] == '4.1', info
+assert info['CFBundleShortVersionString'] == '4.2', info
 assert tuple(map(int, info['MinimumOSVersion'].split('.'))) >= (16, 0), info
 binary = app / info['CFBundleExecutable']
 archs = subprocess.check_output(['lipo', '-archs', str(binary)], text=True).split()

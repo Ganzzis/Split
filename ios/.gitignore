@@ -13,3 +13,6 @@ App/App/capacitor.config.json
 App/App/config.xml
 
 DeviceDerivedData/
+
+VisualDerivedData/
+visual-artifacts/

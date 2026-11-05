@@ -8,7 +8,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = SplitViewController()
+        let navigation = UINavigationController(rootViewController: SplitViewController())
+        navigation.setNavigationBarHidden(true, animated: false)
+        window?.rootViewController = navigation
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

@@ -5,36 +5,7 @@ const assert = require('node:assert/strict');
  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
  try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addInitScript(() => {
-   window.androidBridge = {};
-   window.calls = []; window.listeners = {}; window.prefs = {}; window.exportedJSON = null;
-   const methods = {
-    Share: ['share'], Filesystem: ['readdir', 'writeFile', 'getUri', 'deleteFile'], Preferences: ['get', 'set'], Haptics: ['impact'],
-    Keyboard: ['hide', 'addListener', 'removeListener'], App: ['addListener', 'removeListener', 'exitApp'], Dialog: ['alert', 'confirm'], SplitDocuments: ['exportJSON', 'importJSON']
-   };
-   window.Capacitor = {
-    isNativePlatform: () => true,
-    PluginHeaders: Object.entries(methods).map(([name, list]) => ({ name, methods: list.map(name => ({ name, rtype: name === 'addListener' ? 'callback' : 'promise' })) })),
-    nativeCallback(plugin, method, data, callback) { window.listeners[plugin + '.' + data.eventName] = callback; return 'listener'; },
-    async nativePromise(plugin, method, data = {}) {
-     window.calls.push({ plugin, method, data });
-     if (plugin === 'Preferences') {
-      if (method === 'get') return { value: window.prefs[data.key] ?? null };
-      window.prefs[data.key] = data.value; return {};
-     }
-     if (plugin === 'Filesystem') {
-      if (method === 'readdir') return { files: [] };
-      if (method === 'getUri') return { uri: 'file://cache/' + data.path };
-     }
-     if (plugin === 'SplitDocuments') {
-      if (method === 'exportJSON') { window.exportedJSON = data.raw; return { saved: true }; }
-      return window.importCancelled ? { cancelled: true } : { raw: window.exportedJSON };
-     }
-     if (plugin === 'Dialog') return { value: false };
-     return {};
-    }
-   };
-  });
+  await context.addInitScript(require('./native-bridge-fixture.cjs'), {platform:'android'});
   const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(process.env.SPLIT_URL || 'http://127.0.0.1:8000/');
   await page.waitForSelector('.native-tools');
@@ -60,6 +31,12 @@ const assert = require('node:assert/strict');
   await page.waitForFunction(() => calls.some(c => c.plugin === 'Share' && c.method === 'share'));
   const delivery = await page.evaluate(() => calls.find(c => c.plugin === 'Share' && c.method === 'share').data);
   assert.match(delivery.text, /1\s*000,01/); assert.ok(delivery.files.length > 0);
+  const shareCount = await page.evaluate(() => calls.filter(c => c.plugin === 'Share' && c.method === 'share').length);
+  await page.evaluate(() => { const original = window.fetch; window.fetch = (url, ...args) => { if (String(url).startsWith('blob:')) throw Error('Blob fetch blocked'); return original(url,...args); }; });
+  await page.locator('#share-download-png').click();
+  await page.waitForFunction(count => calls.filter(c => c.plugin === 'Share' && c.method === 'share').length > count, shareCount);
+  assert.equal(await page.evaluate(() => calls.filter(c => c.plugin === 'Share' && c.method === 'share').at(-1).data.files.length), 1);
+  console.log('PASS: selected PNG delivery works with blob fetch blocked; no CSP-dependent refetch');
   await page.evaluate(() => listeners['Keyboard.keyboardWillShow']({ keyboardHeight: 300 }));
   assert.equal(await page.locator('.mobile-dock').isVisible(), false);
   await page.evaluate(() => listeners['App.backButton']({}));

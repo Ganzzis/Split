@@ -80,7 +80,7 @@ const assert = require('node:assert/strict');
   await page.waitForFunction(() => prefs['split-native-backup-current']);
   assert.equal(await page.evaluate(() => JSON.stringify(localStorage)), storageBefore);
   await page.locator('.native-tools button').filter({ hasText: 'Восстановить копию с устройства' }).click();
-  await page.locator('#confirm-import').waitFor({ state: 'visible' });
+  await page.locator('#confirm-import:not(:disabled)').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#confirm-import').isDisabled(), false);
   assert.equal(await page.evaluate(() => JSON.stringify(localStorage)), storageBefore);
   await page.evaluate(() => listeners['App.backButton']({})); await page.locator('#import-dialog').waitFor({ state: 'hidden' });

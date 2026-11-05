@@ -4,6 +4,9 @@ on:
     branches: [feature/capacitor]
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: split-android-debug-signing
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -34,9 +37,14 @@ jobs:
           path: ~/.android/debug.keystore
           key: split-debug-signing-v1
       - run: npm run android:debug
+      - name: Verify APK and record signing certificate
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk | tee android/app/build/outputs/apk/debug/debug-signing.txt
       - uses: actions/upload-artifact@v4
         with:
           name: split-android-debug-${{ github.sha }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/debug-signing.txt
           if-no-files-found: error
           retention-days: 14

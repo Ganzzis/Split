@@ -303,7 +303,8 @@ Simulator artifact не заменяет Device IPA.
 
 `npm run android:debug` создаёт APK versionCode 2 / versionName 4.1 с прежним app ID.
 Локальная сборка повторно использует имеющийся debug keystore, если он сохранился.
-CI сохраняет debug identity в Actions cache `split-debug-signing-v1` для последующих
+Android CI выполняется последовательно, чтобы параллельные запуски не создавали разные ключи.
+Артефакт включает `debug-signing.txt` с fingerprint для сравнения. CI сохраняет debug identity в Actions cache `split-debug-signing-v1` для последующих
 сборок; очистка/истечение cache сменит подпись. Это только отладочная подпись,
 не ключ выпуска. Ключей/сертификатов/provisioning profiles в репозитории нет.
 

@@ -3,6 +3,14 @@ apply plugin: 'com.android.application'
 android {
     namespace = "io.github.ganzzis.split"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        debug {
+            // Optional external debug identity for repeatable CI updates; never a release key.
+            if (System.getenv('SPLIT_DEBUG_KEYSTORE')) {
+                storeFile file(System.getenv('SPLIT_DEBUG_KEYSTORE'))
+            }
+        }
+    }
     defaultConfig {
         applicationId "io.github.ganzzis.split"
         minSdkVersion rootProject.ext.minSdkVersion

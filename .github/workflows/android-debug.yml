@@ -12,8 +12,6 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-24.04
-    env:
-      SPLIT_DEBUG_KEYSTORE: ${{ runner.temp }}/split-debug.keystore
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,10 +31,13 @@ jobs:
       - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
       - run: npm test
+      - name: Select external debug identity path
+        shell: bash
+        run: echo "SPLIT_DEBUG_KEYSTORE=$RUNNER_TEMP/split-debug.keystore" >> "$GITHUB_ENV"
       - name: Retain CI debug signing identity for future updates
         uses: actions/cache@v4
         with:
-          path: ${{ env.SPLIT_DEBUG_KEYSTORE }}
+          path: ${{ runner.temp }}/split-debug.keystore
           key: split-debug-signing-v1
       - name: Create debug identity only on first use
         shell: bash

@@ -28,6 +28,11 @@ jobs:
       - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
       - run: npm test
+      - name: Retain CI debug signing identity for future updates
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: split-debug-signing-v1
       - run: npm run android:debug
       - uses: actions/upload-artifact@v4
         with:

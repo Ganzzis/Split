@@ -1,0 +1,22 @@
+/* Native WebView presentation only. System Share and document pickers are native. */
+html.split-native {--native-vh:100dvh;--native-top:env(safe-area-inset-top,0px);--native-bottom:env(safe-area-inset-bottom,0px);}
+.split-native .mobile-dock {bottom:calc(10px + var(--native-bottom));background:color-mix(in srgb,var(--surface-strong) 66%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+.split-native .confirm-dialog {position:fixed;inset:auto 0 var(--native-keyboard,0px);margin:0 auto;width:min(620px,100%);max-width:100vw;height:auto;min-height:0;max-height:calc(min(100dvh,var(--native-vh)) - var(--native-top) - 12px);box-sizing:border-box;border-radius:26px 26px 0 0;padding:20px 18px calc(16px + var(--native-bottom));overflow:auto;overscroll-behavior:contain;scroll-padding:64px 0 90px;}
+.split-native .confirm-dialog::before {content:"";display:block;width:36px;height:4px;border-radius:4px;background:var(--border-strong);margin:0 auto 16px;}
+.split-native .dialog-actions {position:sticky;bottom:calc(-16px - var(--native-bottom));background:var(--surface-strong);padding:12px 0 calc(12px + var(--native-bottom));margin-top:12px;display:flex;flex-direction:row;flex-wrap:wrap;z-index:2;}
+.split-native .dialog-actions>button {width:auto;flex:1;}
+.split-native .share-dialog .sheet-heading {position:sticky;top:-20px;z-index:3;background:var(--surface-strong);padding:12px 0;align-items:center;}
+.split-native .share-dialog .sheet-heading button {flex-shrink:0;}
+.split-native .share-dialog .share-image {max-height:min(28dvh,240px);margin:8px 0;}
+.split-native .share-dialog[open] {display:flex;flex-direction:column;}
+.split-native .native-sheet-content {overflow:auto;overscroll-behavior:contain;min-height:0;}
+.split-native .share-dialog>.share-buttons {flex-shrink:0;background:var(--surface-strong);padding:10px 0;margin:0;z-index:2;}
+.split-native .share-dialog .sheet-heading {flex-shrink:0;}
+.split-native .share-dialog textarea {min-height:100px;max-height:180px;}
+.split-native .confirm-dialog[open] {animation:split-native-in .18s ease-out;}
+.split-native body {padding-bottom:calc(104px + var(--native-bottom));}
+.split-native.low-effects .mobile-dock,.split-native.low-effects .confirm-dialog::backdrop {backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--surface-strong);}
+.split-native.low-effects .panel {backdrop-filter:none;-webkit-backdrop-filter:none;}
+.split-native.reduced-motion * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+@keyframes split-native-in {from {opacity:0;transform:translateY(30px)} to {opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.split-native *{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}

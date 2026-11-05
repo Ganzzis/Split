@@ -1,0 +1,43 @@
+name: iOS Device unsigned IPA
+on:
+  push:
+    branches: [feature/capacitor]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios-device:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+      - run: xcodebuild -version
+      - run: npm ci
+      - run: npm test
+      - run: npm run cap:sync
+      - name: Build unsigned ARM64 device app
+        run: >-
+          xcodebuild -project ios/App/App.xcodeproj -scheme App
+          -configuration Debug -sdk iphoneos
+          -destination 'generic/platform=iOS'
+          -derivedDataPath ios/DeviceDerivedData
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - name: Verify and package Payload/Split.app
+        run: |
+          python3 scripts/verify-ios-app.py ios/DeviceDerivedData/Build/Products/Debug-iphoneos/App.app
+          mkdir -p ipa/Payload
+          ditto ios/DeviceDerivedData/Build/Products/Debug-iphoneos/App.app ipa/Payload/Split.app
+          cd ipa
+          ditto -c -k --keepParent Payload Split-unsigned.ipa
+          unzip -l Split-unsigned.ipa | head -30 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: split-ios-device-unsigned-${{ github.sha }}
+          path: ipa/Split-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14

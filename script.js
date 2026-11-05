@@ -461,6 +461,7 @@
   });
 
   function download(raw, filename) {
+    if (window.SplitNative?.exportJSON) { window.SplitNative.exportJSON(raw,filename).catch(() => showToast('Сохранение JSON отменено или не выполнено. История не изменена.')); return; }
     const blob = new Blob([raw], {type:'application/json'});
     const url = URL.createObjectURL(blob), link = el('a'); link.href = url; link.download = filename; link.click();
     setTimeout(() => URL.revokeObjectURL(url),1000);

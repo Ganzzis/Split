@@ -35,3 +35,5 @@ jobs:
           done
           curl --fail --silent http://127.0.0.1:8000/ > /dev/null
           npm run test:browser
+          npm run build:native
+          node tests/native-shell.cjs

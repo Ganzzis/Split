@@ -95,3 +95,32 @@ Android `assembleDebug` выполнен на Linux с полным JDK 21 и SD
 PWA-тест теперь берёт исходную версию кэша из `sw.js`, чтобы смена версии оболочки
 не отключала моделирование обновлений. Для Chromium CI закреплён Ubuntu 24.04,
 совместимый с Playwright 1.56.1; Android SDK setup не запрашивает удалённый пакет `tools`.
+
+
+## Split 4.1 — нативные адаптеры и Device IPA
+
+- `npm test`: существующая денежная/историческая регрессия, чистая web/native-сборка,
+  SHA-256 совместимого JSON, read-back, сохранение предыдущего указателя при отказе,
+  отказ восстановления повреждённой копии, native text/многостраничный PNG transport,
+  отмена/ошибка Share, отсутствие преждевременного удаления файлов получателя.
+- `npm run test:browser`: вся прежняя браузерная регрессия на `npm run build`.
+- После `npm run build:native`, при сервере `www`:
+  `PLAYWRIGHT_MODULE=$PWD/node_modules/playwright-core CHROMIUM_PATH=/usr/bin/chromium node tests/native-shell.cjs`.
+  Тест использует реальный bundled adapter с **mock native bridge**, проверяет высоту sheets
+  на 320×568, 390×844, 844×390 и 390×420, видимость закрытия/Share, независимую прокрутку,
+  доставку PNG/text, Back, экспорт JSON, неизменность localStorage до подтверждения,
+  отмену импорта, reduced motion и отключение blur. Это не эмуляция OS Share Sheet/Files.
+- Android CI: debug APK + versionCode 2, SDK 36, JDK 21, кэш debug signing identity.
+- iOS Simulator CI: сборка гибридного приложения и официальных плагинов на Xcode 26.3.
+- iOS Device IPA CI: unsigned `generic/platform=iOS`, ARM64, `scripts/verify-ios-app.py`,
+  проверка privacy manifest/resources/native linkage и упаковка `Payload/Split.app`.
+- Web CI: unit + все browser suites + native bridge contract/presentation test.
+
+Обязательная ручная проверка на Xiaomi/iPhone перед выпуском: системные панели,
+клавиатура с Gboard/MIUI, жест/аппаратный Back, маленький экран и landscape,
+большой шрифт, VoiceOver/TalkBack, отмена и выбор приложения в Share (1 и несколько PNG),
+чтение получателем после закрытия chooser, Files/iCloud/локальный document provider,
+отмена/ошибки доступа, перезапуск в авиарежиме, обновление с прежней подписью,
+восстановление JSON после удаления. Тактильный отклик проверяется физически.
+Сборка IPA не доказывает его подпись или установку; сертификаты и provisioning — вне репозитория.
+Нативные скриншоты/тест на физическом iPhone и повторный тест на Xiaomi пока не выполнены.

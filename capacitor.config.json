@@ -1,5 +1,11 @@
 {
   "appId": "io.github.ganzzis.split",
   "appName": "Split",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    }
+  }
 }

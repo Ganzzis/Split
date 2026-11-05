@@ -5,3 +5,8 @@ www/
 Split-Simulator.zip
 *.jks
 *.keystore
+
+ipa/
+*.ipa
+*.p12
+*.mobileprovision

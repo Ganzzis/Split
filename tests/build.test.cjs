@@ -40,3 +40,12 @@ test('native shell does not register service worker; browser keeps PWA registrat
   assert.equal(events.includes('load'), !native);
  }
 });
+
+test('native build bundles adapters and CSS after the unchanged financial modules', () => {
+ execFileSync(process.execPath, ['scripts/build.mjs', '--native'], { cwd: root });
+ const html = fs.readFileSync(path.join(root, 'www/index.html'), 'utf8');
+ assert.ok(html.includes('src="native.js"')); assert.ok(html.includes('href="native.css"'));
+ assert.ok(html.indexOf('src="script.js"') < html.indexOf('src="native.js"'));
+ assert.ok(fs.statSync(path.join(root, 'www/native.js')).size > 1000);
+ for (const file of ['core.js', 'items-core.js', 'history.js', 'reports.js']) assert.deepEqual(fs.readFileSync(path.join(root, file)), fs.readFileSync(path.join(root, 'www', file)));
+});

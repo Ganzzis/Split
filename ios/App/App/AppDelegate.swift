@@ -42,3 +42,77 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+// Kept in the app target; no external server or broad filesystem permission.
+import UniformTypeIdentifiers
+
+@objc(SplitDocumentsPlugin)
+public class SplitDocumentsPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
+    public let identifier = "SplitDocumentsPlugin"
+    public let jsName = "SplitDocuments"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "importJSON", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "exportJSON", returnType: CAPPluginReturnPromise)
+    ]
+    private var pending: CAPPluginCall?
+    private var exportURL: URL?
+    private let limit = 10 * 1024 * 1024
+
+    private func present(_ picker: UIDocumentPickerViewController, call: CAPPluginCall) {
+        guard pending == nil, let controller = bridge?.viewController, controller.presentedViewController == nil else {
+            call.reject("Document picker is already open or unavailable"); return
+        }
+        pending = call; picker.delegate = self
+        controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+    @objc func importJSON(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.present(UIDocumentPickerViewController(forOpeningContentTypes: [.json, .plainText], asCopy: true), call: call)
+        }
+    }
+    @objc func exportJSON(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard self.pending == nil else { call.reject("Document picker already open"); return }
+            guard let raw = call.getString("raw"), let data = raw.data(using: .utf8), data.count <= self.limit else { call.reject("Invalid JSON size"); return }
+            let requested = call.getString("name") ?? "split-history.json"
+            let name = requested.range(of: "^[A-Za-z0-9_-]+\\.json$", options: .regularExpression) != nil ? requested : "split-history.json"
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            do {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let url = directory.appendingPathComponent(name)
+                try data.write(to: url, options: .atomic)
+                self.exportURL = url
+                self.present(UIDocumentPickerViewController(forExporting: [url], asCopy: true), call: call)
+                if self.pending == nil { self.cleanup() }
+            } catch { self.cleanup(); call.reject("Unable to prepare JSON") }
+        }
+    }
+    private func cleanup() {
+        if let url = exportURL { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        exportURL = nil
+    }
+    public func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        pending?.resolve(["cancelled": true]); pending = nil; cleanup()
+    }
+    public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let call = pending else { return }
+        defer { pending = nil; cleanup() }
+        if exportURL != nil { call.resolve(["saved": true]); return }
+        guard let url = urls.first else { call.reject("No document"); return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? limit + 1
+            guard size <= limit else { call.reject("File exceeds 10 MB"); return }
+            let data = try Data(contentsOf: url)
+            guard data.count <= limit, let raw = String(data: data, encoding: .utf8) else { call.reject("Invalid UTF-8 JSON"); return }
+            call.resolve(["raw": raw])
+        } catch { call.reject("Unable to read JSON") }
+    }
+}
+
+class SplitViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(SplitDocumentsPlugin())
+    }
+}

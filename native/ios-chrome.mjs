@@ -12,6 +12,7 @@ export async function installIOSChrome({ Chrome, document, window }) {
   });
  };
  await Chrome.addListener('action', ({ action, view }) => {
+  if (action === 'refresh') last = '';
   if (action === 'navigate') document.querySelector(`.mobile-dock [data-view="${['history','calculation','results'].includes(view) ? view : 'history'}"]`)?.click();
   const targets = { theme: '#theme-toggle', back: '#back-history', rename: '#rename-current', export: '#export-current', reset: '#reset-btn', mode: '#switch-mode', import: '#import-file', exportAll: '#export-history', create: '#create-calculation' };
   if (targets[action]) document.querySelector(targets[action])?.click();

@@ -138,6 +138,9 @@ public class SplitChromePlugin: CAPPlugin, CAPBridgedPlugin, UIAdaptivePresentat
             self.sheetCall = call
             let content = SplitIntentSheet(title: call.getString("title") ?? "Split", message: call.getString("message") ?? "", editing: call.getBool("editing") ?? false, destructive: call.getBool("destructive") ?? false, confirm: call.getString("confirm") ?? "Подтвердить", completion: { [weak self] confirmed, value in self?.finishSheet(confirmed, value: value) }, value: call.getString("value") ?? "")
             let host = UIHostingController(rootView: content)
+            host.modalPresentationStyle = .pageSheet
+            host.sheetPresentationController?.detents = [.medium(), .large()]
+            host.sheetPresentationController?.prefersGrabberVisible = true
             host.overrideUserInterfaceStyle = vc.overrideUserInterfaceStyle
             self.sheet = host
             vc.present(host, animated: !UIAccessibility.isReduceMotionEnabled)
@@ -181,6 +184,8 @@ extension SplitViewController {
             ])
             floatingHost = host
             NotificationCenter.default.addObserver(self, selector: #selector(chromeKeyboard(_:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(chromeTypeChanged), name: UIContentSizeCategory.didChangeNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(chromeTypeChanged), name: UIAccessibility.reduceTransparencyStatusDidChangeNotification, object: nil)
         }
         floatingHost?.view.isUserInteractionEnabled = !modal
         floatingHost?.view.accessibilityElementsHidden = modal
@@ -223,7 +228,15 @@ extension SplitViewController {
         for button in navigationItem.rightBarButtonItems ?? [] { button.isEnabled = !modal }
         navigationItem.leftBarButtonItem?.isEnabled = !modal
         titleLabel.alpha = scrolled ? 0.88 : 1
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.navigationController?.view.layoutIfNeeded()
+            let height = max(68, self.floatingHost?.view.bounds.height ?? 68)
+            let scale = min(1.5, max(1, UIFont.preferredFont(forTextStyle: .body).pointSize / 17))
+            self.webView?.evaluateJavaScript("document.documentElement.style.setProperty('--ios-native-tab-height','\(height)px');document.documentElement.style.setProperty('--ios-type-scale','\(scale)');document.documentElement.classList.toggle('ios-reduced-transparency',\(UIAccessibility.isReduceTransparencyEnabled ? "true" : "false"));")
+        }
     }
+    @objc func chromeTypeChanged() { chromeModel.action?("refresh", nil) }
     @objc func chromeKeyboard(_ note: Notification) {
         guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect, let window = view.window else { return }
         floatingHost?.view.isHidden = frame.minY < window.bounds.height - 50

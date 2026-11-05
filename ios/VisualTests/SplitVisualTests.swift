@@ -41,7 +41,7 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
         capture(app, "\(theme)-04-native-rename-keyboard")
         app.buttons["Отмена"].firstMatch.tap()
-        XCTAssertTrue(results.waitForExistence(timeout: 10)); results.tap()
+        XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["native-actions"]); waitForExpectations(timeout: 10); results.tap()
         XCTAssertTrue(app.navigationBars.staticTexts["ИТОГИ"].waitForExistence(timeout: 10))
         capture(app, "\(theme)-05-results")
         let share = app.webViews.buttons["Поделиться"].firstMatch
@@ -56,6 +56,16 @@ final class SplitVisualTests: XCTestCase {
         let nativeCopy = app.buttons.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
         XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
         capture(app, "\(theme)-07-system-share")
+        app.terminate()
+    }
+    func testLargeType() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--split-ui-tests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"]
+        app.launchEnvironment["SPLIT_UI_TEST_FIXTURE"] = fixture(); app.launchEnvironment["SPLIT_UI_TEST_THEME"] = "light"
+        app.launch()
+        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons["native-theme"].isHittable)
+        capture(app, "accessibility-large-type-history")
         app.terminate()
     }
     func testLight() { runFlow(theme: "light") }

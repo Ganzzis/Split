@@ -106,5 +106,7 @@ if (Capacitor.isNativePlatform()) {
  body.className = 'native-sheet-content';
  for (const node of [...sheet.children]) if (!node.matches('.sheet-heading,.share-buttons:not(#share-png-actions)')) body.append(node);
  sheet.querySelector('.sheet-heading').after(body);
+ // Keep the text action ahead of the readonly preview's independent scroll area.
+ sheet.querySelector('.share-text-details summary').after(document.querySelector('#share-download-text'));
  document.querySelector('#share-download-text').onclick = () => Share.share({ title: 'Split', text: document.querySelector('#share-text').value }).catch(() => notify('Системный обмен не выполнен.'));
 }

@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
   await page.locator('#create-calculation').click();
   await page.locator('.person-paid').first().fill('1000.01');
   await page.locator('.mobile-dock [data-view="results"]').click();
+  assert.equal(await page.evaluate(()=>!!(document.querySelector('#share-download-text').compareDocumentPosition(document.querySelector('#share-text')) & Node.DOCUMENT_POSITION_FOLLOWING)),true);
   await page.locator('#share-results').click(); await page.locator('#share-image').waitFor({ state: 'visible' });
   for (const [width, height] of [[320,568],[390,844],[844,390],[390,420]]) {
    await page.setViewportSize({ width, height });

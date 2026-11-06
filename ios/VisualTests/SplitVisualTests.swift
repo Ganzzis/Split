@@ -66,7 +66,7 @@ final class SplitVisualTests: XCTestCase {
         cancelIntent(app, menuTitle: "Сбросить суммы")
         cancelIntent(app, menuTitle: "Сменить режим")
         results.tap()
-        XCTAssertTrue(app.navigationBars.staticTexts["ИТОГИ"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.staticTexts.matching(NSPredicate(format: "label ENDSWITH ', итоги'")).firstMatch.waitForExistence(timeout: 10))
         capture(app, "\(theme)-05-results")
         let share = app.webViews.buttons["Поделиться"].firstMatch
         XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
@@ -110,28 +110,37 @@ final class SplitVisualTests: XCTestCase {
             dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
         }
         XCTAssertTrue(textPreview.isHittable); textPreview.tap()
-        let reportText = app.webViews.textViews.firstMatch
-        XCTAssertTrue(reportText.waitForExistence(timeout: 10))
         let close = app.webViews.buttons["Закрыть обмен"].firstMatch
         let scrollBounds = CGRect(x: 24, y: close.frame.maxY + 12, width: dialogWeb.frame.width - 48,
                                   height: system.frame.minY - close.frame.maxY - 24)
-        for _ in 0..<12 {
-            if reportText.frame.intersection(scrollBounds).height > 60 { break }
-            drag(app, in: scrollBounds)
-        }
-        let visibleText = reportText.frame.intersection(scrollBounds)
-        XCTAssertGreaterThan(visibleText.height, 30, "Long report must be reachable inside the preview scroll area")
-        drag(app, in: visibleText)
-        XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
-        capture(app, "\(theme)-07b-long-text-preview")
         let textOnly = app.webViews.buttons["Отправить только текст"].firstMatch
         for _ in 0..<12 {
             if textOnly.exists && textOnly.isHittable { break }
             drag(app, in: scrollBounds)
         }
         XCTAssertTrue(textOnly.isHittable); textOnly.tap()
-        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); capture(app, "\(theme)-07c-text-only-system-share"); nativeCopy.tap()
+        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); capture(app, "\(theme)-07b-text-only-system-share"); nativeCopy.tap()
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
+        let reportText = app.webViews.textViews.firstMatch
+        XCTAssertTrue(reportText.waitForExistence(timeout: 10))
+        let reportLabel = app.webViews.staticTexts["Отчёт для мессенджера"].firstMatch
+        // Start a parent scroll on the label/action, never inside a readonly textarea:
+        // the latter legitimately scrolls its own long content instead of the sheet.
+        for _ in 0..<12 {
+            if reportText.frame.intersection(scrollBounds).height > 60 { break }
+            let handle = [reportLabel, textOnly].first { $0.exists && $0.frame.intersection(scrollBounds).height > 8 }
+            if let handle {
+                let visible = handle.frame.intersection(scrollBounds)
+                let origin = app.coordinate(withNormalizedOffset: .zero)
+                origin.withOffset(CGVector(dx: visible.midX, dy: visible.midY)).press(forDuration: 0.1,
+                    thenDragTo: origin.withOffset(CGVector(dx: scrollBounds.midX, dy: scrollBounds.minY + 5)))
+            } else { drag(app, in: scrollBounds) }
+        }
+        let visibleText = reportText.frame.intersection(scrollBounds)
+        XCTAssertGreaterThan(visibleText.height, 30, "Long report must be reachable inside the preview scroll area")
+        drag(app, in: visibleText)
+        XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
+        capture(app, "\(theme)-07c-long-text-preview")
         XCTAssertTrue(close.isHittable); close.tap()
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-visible"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["native-tab-history"].isHittable)

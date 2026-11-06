@@ -1,32 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
+profile=${1:-standard}
+case "$profile" in standard|compact) ;; *) exit 2 ;; esac
 ruby scripts/add-ios-visual-tests.rb
-trap 'for result in ios/visual-artifacts/*.xcresult; do xcrun xcresulttool export attachments --path "$result" --output-path "${result%.xcresult}-screenshots" || true; done' EXIT
+trap 'xcrun xcresulttool export attachments --path ios/visual-artifacts/Visual.xcresult --output-path ios/visual-artifacts/screenshots || true' EXIT
 mkdir -p ios/visual-artifacts
-sim_id=$(python3 - <<'PY'
-import json,subprocess
-r=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+# Each profile runs on its own clean runner. Do not shut down/reuse the tested
+# device to create another: CoreSimulator can hang after successful XCTest.
+sim_id=$(python3 - "$profile" <<'PY'
+import json,subprocess,sys
+r=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j'],timeout=90))
 choices=[(runtime,d) for runtime,devices in r['devices'].items() if 'iOS-26' in runtime for d in devices if d['name'].startswith('iPhone')]
 if not choices: raise SystemExit('No available iOS 26 iPhone Simulator')
 choices.sort(key=lambda item: (item[0], 'Pro' in item[1]['name']),reverse=True)
-print(choices[0][1]['udid'])
+runtime,device=choices[0]
+if sys.argv[1]=='compact':
+ print(subprocess.check_output(['xcrun','simctl','create','Split-Compact','com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation',runtime],text=True,timeout=90).strip())
+else: print(device['udid'])
 PY
 )
-xcrun simctl boot "$sim_id" || true
-xcrun simctl bootstatus "$sim_id" -b
-xcrun simctl status_bar "$sim_id" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+echo "Booting $profile Simulator $sim_id"
+python3 - "$sim_id" <<'PY'
+import subprocess,sys
+subprocess.run(['xcrun','simctl','boot',sys.argv[1]],timeout=90,check=False)
+subprocess.run(['xcrun','simctl','bootstatus',sys.argv[1],'-b'],timeout=600,check=True)
+subprocess.run(['xcrun','simctl','status_bar',sys.argv[1],'override','--time','9:41','--dataNetwork','wifi','--wifiMode','active','--wifiBars','3','--batteryState','charged','--batteryLevel','100'],timeout=60,check=True)
+PY
+if [[ "$profile" == compact ]]; then
+  selection=(-only-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare)
+else
+  selection=(-skip-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare)
+fi
+echo "Running $profile interaction regression"
 xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
   -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$sim_id" \
   -derivedDataPath ios/DerivedData -resultBundlePath ios/visual-artifacts/Visual.xcresult \
-  -skip-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare CODE_SIGNING_ALLOWED=NO test
-
-# A real compact Simulator, with Accessibility XL text, not merely a resized screenshot.
-runtime=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print(next(r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and "iOS-26" in r["identifier"]))')
-xcrun simctl shutdown "$sim_id" || true
-small_id=$(xcrun simctl create Split-Compact com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation "$runtime")
-xcrun simctl boot "$small_id"
-xcrun simctl bootstatus "$small_id" -b
-xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
-  -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$small_id" \
-  -derivedDataPath ios/DerivedData -resultBundlePath ios/visual-artifacts/Compact.xcresult \
-  -only-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare CODE_SIGNING_ALLOWED=NO test
+  "${selection[@]}" CODE_SIGNING_ALLOWED=NO test

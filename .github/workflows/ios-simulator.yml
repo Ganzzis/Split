@@ -9,6 +9,11 @@ permissions:
 jobs:
   ios:
     runs-on: macos-15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [standard, compact]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,16 +36,19 @@ jobs:
       - name: Prepare visual UI test tooling
         run: gem install xcodeproj -v 1.27.0 --user-install --no-document
       - name: iPhone Simulator visual and interaction regression
-        run: bash scripts/ios-visual-tests.sh
+        timeout-minutes: 22
+        run: bash scripts/ios-visual-tests.sh "${{ matrix.device }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: split-ios-visual-${{ github.sha }}
+          name: split-ios-visual-${{ matrix.device }}-${{ github.sha }}
           path: ios/visual-artifacts/
           if-no-files-found: warn
       - name: Archive simulator app
+        if: matrix.device == 'standard'
         run: ditto -c -k --keepParent ios/DerivedData/Build/Products/Debug-iphonesimulator/App.app Split-Simulator.zip
       - uses: actions/upload-artifact@v4
+        if: matrix.device == 'standard'
         with:
           name: split-ios-simulator-${{ github.sha }}
           path: Split-Simulator.zip

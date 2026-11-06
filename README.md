@@ -348,7 +348,7 @@ Android не получает iOS-навигацию. Для отдельной 
 заблокированным blob-fetch; это не заменяет повторный тест на Xiaomi.
 
 Simulator CI теперь запускает XCTest на iPhone/iOS 26 и сохраняет
-`split-ios-visual-<SHA>`: xcresult и PNG-вложения светлой/тёмной темы, прокрутки,
+`split-ios-visual-standard-<SHA>` и `split-ios-visual-compact-<SHA>`: xcresult и PNG-вложения светлой/тёмной темы, прокрутки,
 длинного названия, нативного rename sheet с клавиатурой и системного Share.
 Данные для UI-тестов создаются только при специальном DEBUG launch argument
 в изолированном контейнере Simulator; обычный запуск не записывает fixtures.

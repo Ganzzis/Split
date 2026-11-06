@@ -24,7 +24,6 @@ python3 - "$sim_id" <<'PY'
 import subprocess,sys
 subprocess.run(['xcrun','simctl','boot',sys.argv[1]],timeout=90,check=False)
 subprocess.run(['xcrun','simctl','bootstatus',sys.argv[1],'-b'],timeout=600,check=True)
-subprocess.run(['xcrun','simctl','status_bar',sys.argv[1],'override','--time','9:41','--dataNetwork','wifi','--wifiMode','active','--wifiBars','3','--batteryState','charged','--batteryLevel','100'],timeout=60,check=True)
 PY
 if [[ "$profile" == compact ]]; then
   selection=(-only-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare)

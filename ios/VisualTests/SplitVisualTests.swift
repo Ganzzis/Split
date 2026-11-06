@@ -20,6 +20,21 @@ final class SplitVisualTests: XCTestCase {
     func capture(_ app: XCUIApplication, _ name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
     }
+    func cancelIntent(_ app: XCUIApplication, menuTitle: String) {
+        app.buttons["native-actions"].tap(); app.buttons[menuTitle].tap()
+        let cancel = app.buttons["Отмена"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10)); XCTAssertTrue(cancel.isHittable)
+        XCTAssertFalse(app.buttons["native-tab-results"].exists)
+        cancel.tap()
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["native-actions"]); waitForExpectations(timeout: 15)
+        XCTAssertTrue(app.buttons["native-tab-results"].isHittable)
+    }
+    func drag(_ app: XCUIApplication, in rect: CGRect) {
+        XCTAssertGreaterThan(rect.height, 30)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: rect.midX, dy: rect.maxY - 10)).press(forDuration: 0.1,
+            thenDragTo: origin.withOffset(CGVector(dx: rect.midX, dy: rect.minY + 10)))
+    }
     func runFlow(theme: String, largeType: Bool = false) {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -47,7 +62,10 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
         capture(app, "\(theme)-04-native-rename-keyboard")
         app.buttons["Отмена"].firstMatch.tap()
-        XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["native-actions"]); waitForExpectations(timeout: 10); results.tap()
+        XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["native-actions"]); waitForExpectations(timeout: 10)
+        cancelIntent(app, menuTitle: "Сбросить суммы")
+        cancelIntent(app, menuTitle: "Сменить режим")
+        results.tap()
         XCTAssertTrue(app.navigationBars.staticTexts["ИТОГИ"].waitForExistence(timeout: 10))
         capture(app, "\(theme)-05-results")
         let share = app.webViews.buttons["Поделиться"].firstMatch
@@ -94,15 +112,38 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(textPreview.isHittable); textPreview.tap()
         let reportText = app.webViews.textViews.firstMatch
         XCTAssertTrue(reportText.waitForExistence(timeout: 10))
-        reportText.swipeUp()
+        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
+        let scrollBounds = CGRect(x: 24, y: close.frame.maxY + 12, width: app.frame.width - 48,
+                                  height: system.frame.minY - close.frame.maxY - 24)
+        for _ in 0..<12 {
+            if reportText.frame.intersection(scrollBounds).height > 60 { break }
+            drag(app, in: scrollBounds)
+        }
+        let visibleText = reportText.frame.intersection(scrollBounds)
+        XCTAssertGreaterThan(visibleText.height, 30, "Long report must be reachable inside the preview scroll area")
+        drag(app, in: visibleText)
         XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
         capture(app, "\(theme)-07b-long-text-preview")
-        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
+        let textOnly = app.webViews.buttons["Отправить только текст"].firstMatch
+        for _ in 0..<12 {
+            if textOnly.exists && textOnly.isHittable { break }
+            drag(app, in: scrollBounds)
+        }
+        XCTAssertTrue(textOnly.isHittable); textOnly.tap()
+        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); capture(app, "\(theme)-07c-text-only-system-share"); nativeCopy.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
         XCTAssertTrue(close.isHittable); close.tap()
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-visible"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["native-tab-history"].isHittable)
         app.buttons["native-tab-history"].tap()
         capture(app, "\(theme)-08-tabs-restored")
+        let delete = app.webViews.buttons["Удалить"].firstMatch
+        if !delete.isHittable { app.webViews.firstMatch.swipeUp() }
+        XCTAssertTrue(delete.isHittable); delete.tap()
+        XCTAssertTrue(app.buttons["Отмена"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["native-tab-history"].exists)
+        app.buttons["Отмена"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 15))
         app.terminate()
     }
     func testSmallScreenShare() { runFlow(theme: "light", largeType: true) }

@@ -84,6 +84,17 @@ final class SplitVisualTests: XCTestCase {
         }
         XCTAssertTrue(png.isHittable, "PNG action must be reachable in scrollable preview")
         png.tap(); XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15)); nativeCopy.tap()
+        let textPreview = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == 'Текст отчёта'")).firstMatch
+        for _ in 0..<12 {
+            if textPreview.exists && textPreview.isHittable { break }
+            dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
+        }
+        XCTAssertTrue(textPreview.isHittable); textPreview.tap()
+        let reportText = app.webViews.textViews.firstMatch
+        XCTAssertTrue(reportText.waitForExistence(timeout: 10))
+        reportText.swipeUp()
+        XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
+        capture(app, "\(theme)-07b-long-text-preview")
         let close = app.webViews.buttons["Закрыть обмен"].firstMatch
         XCTAssertTrue(close.isHittable); close.tap()
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-visible"].waitForExistence(timeout: 15))

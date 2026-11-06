@@ -3,7 +3,7 @@ export async function installIOSChrome({ Chrome, document, window }) {
  let pending = false, last = '';
  const state = () => ({ view: document.body.dataset.view || 'history', title: document.querySelector('#editor-title')?.textContent || 'Расчёт',
   hasCurrent: !document.querySelector('.mobile-dock [data-view="calculation"]').disabled,
-  dark: document.documentElement.dataset.theme === 'dark', modal: !!document.querySelector('dialog[open]'), scrolled: window.scrollY > 16 });
+  dark: document.documentElement.dataset.theme === 'dark', modal: !!document.querySelector('dialog[open]'), viewportWidth: window.innerWidth, scrolled: window.scrollY > 16 });
  const sync = () => {
   if (pending) return; pending = true;
   window.requestAnimationFrame(async () => {
@@ -25,6 +25,7 @@ export async function installIOSChrome({ Chrome, document, window }) {
  observer.observe(document.querySelector('.mobile-dock [data-view="calculation"]'), { attributes: true, attributeFilter: ['disabled'] });
  for (const dialog of document.querySelectorAll('dialog')) observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
  window.addEventListener('scroll', sync, { passive: true });
+ window.addEventListener('resize', sync, { passive: true });
  // Preserve all existing validation/storage handlers; native sheets only collect intent.
  const mapping = { 'rename-dialog': { input: '#rename-name', confirm: '#rename-form button[type="submit"]' },
   'delete-dialog': { confirm: '#confirm-delete', destructive: true }, 'reset-dialog': { confirm: '#confirm-reset', destructive: true },

@@ -175,16 +175,26 @@ final class SplitRootController: UIViewController {
 
 extension SplitViewController {
     func updateChrome(plugin: SplitChromePlugin, section: String, title: String, hasCurrent: Bool, dark: Bool, modal: Bool, scrolled: Bool) {
+        let key = "\(section)|\(title)|\(hasCurrent)|\(dark)|\(modal)|\(traitCollection.preferredContentSizeCategory.rawValue)|\(UIAccessibility.isReduceTransparencyEnabled)|\(view.bounds.width)"
+        if chromeContentKey == key { chromeTitleLabel?.alpha = scrolled ? 0.88 : 1; return }
+        chromeContentKey = key
         chromeModel.section = section; chromeModel.hasCurrent = hasCurrent
         chromeModel.action = { [weak plugin] action, view in plugin?.action(action, view: view) }
         overrideUserInterfaceStyle = dark ? .dark : .light
         navigationController?.overrideUserInterfaceStyle = overrideUserInterfaceStyle
+        navigationController?.parent?.overrideUserInterfaceStyle = overrideUserInterfaceStyle
+        let background = dark ? UIColor(red: 16/255, green: 17/255, blue: 23/255, alpha: 1) : UIColor(red: 239/255, green: 237/255, blue: 245/255, alpha: 1)
+        navigationController?.view.backgroundColor = background
+        navigationController?.parent?.view.backgroundColor = background
+        webView?.isOpaque = false; webView?.backgroundColor = background; webView?.scrollView.backgroundColor = background
         floatingHost?.overrideUserInterfaceStyle = overrideUserInterfaceStyle
-        navigationController?.setNavigationBarHidden(false, animated: false)
+        if navigationController?.isNavigationBarHidden == true { navigationController?.setNavigationBarHidden(false, animated: false) }
         if floatingHost == nil, let owner = navigationController?.parent {
             let parent = owner.view!
             edgesForExtendedLayout = []
             let host = UIHostingController(rootView: SplitFloatingTabs(model: chromeModel))
+            host.overrideUserInterfaceStyle = overrideUserInterfaceStyle
+            host.sizingOptions = .intrinsicContentSize
             owner.addChild(host); parent.addSubview(host.view); host.didMove(toParent: owner)
             host.view.backgroundColor = .clear; host.view.translatesAutoresizingMaskIntoConstraints = false
             let preferredWidth = host.view.widthAnchor.constraint(equalTo: parent.widthAnchor, constant: -32)
@@ -204,18 +214,22 @@ extension SplitViewController {
         }
         floatingHost?.view.isUserInteractionEnabled = !modal
         floatingHost?.view.accessibilityElementsHidden = modal
+        navigationController?.navigationBar.accessibilityElementsHidden = modal
+        webView?.accessibilityViewIsModal = modal
         navigationController?.navigationBar.accessibilityIdentifier = "split-native-navigation"
         let appearance = UINavigationBarAppearance(); appearance.configureWithTransparentBackground()
         appearance.shadowColor = .clear
         navigationItem.standardAppearance = appearance; navigationItem.scrollEdgeAppearance = appearance
         navigationController?.navigationBar.tintColor = UIColor.splitAccent
         let titleLabel = UILabel(); titleLabel.font = .preferredFont(forTextStyle: .headline); titleLabel.adjustsFontForContentSizeCategory = true
+        chromeTitleLabel = titleLabel; titleLabel.textColor = .label
+        if section == "history" { titleLabel.font = UIFontMetrics(forTextStyle: .title3).scaledFont(for: .systemFont(ofSize: 20, weight: .semibold)) }
         titleLabel.text = section == "history" ? "Split" : title
         titleLabel.lineBreakMode = .byTruncatingTail; titleLabel.adjustsFontSizeToFitWidth = true; titleLabel.minimumScaleFactor = 0.8
         titleLabel.accessibilityLabel = section == "history" ? "Split, история расчётов" : title + (section == "results" ? ", итоги" : ", расчёт")
         let subtitle = UILabel(); subtitle.font = .preferredFont(forTextStyle: .caption2); subtitle.adjustsFontForContentSizeCategory = true; subtitle.textColor = .secondaryLabel
         subtitle.text = section == "history" ? "ОБЩИЕ ПЛАНЫ · ЯСНЫЕ ИТОГИ" : section == "results" ? "ИТОГИ" : "РАСЧЁТ"
-        subtitle.isHidden = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
+        subtitle.isHidden = section == "history" || traitCollection.preferredContentSizeCategory.isAccessibilityCategory
         let logo = UIImageView(image: UIImage(systemName: "arrow.left.arrow.right")); logo.tintColor = .splitAccent; logo.contentMode = .scaleAspectFit
         logo.widthAnchor.constraint(equalToConstant: 22).isActive = true; logo.heightAnchor.constraint(equalToConstant: 22).isActive = true
         logo.isHidden = section != "history"; logo.isAccessibilityElement = false

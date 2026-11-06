@@ -114,6 +114,8 @@ public class SplitDocumentsPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
 }
 
 class SplitViewController: CAPBridgeViewController {
+    var chromeContentKey = ""
+    weak var chromeTitleLabel: UILabel?
     let chromeModel = SplitChromeModel()
     var floatingHost: UIHostingController<SplitFloatingTabs>?
     override func capacitorDidLoad() {

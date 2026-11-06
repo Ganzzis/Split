@@ -27,10 +27,14 @@ final class SplitVisualTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.navigationBars["split-native-navigation"].exists)
+        let create = app.webViews.buttons["Новый расчёт"].firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 20)); expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: create); waitForExpectations(timeout: 20)
         capture(app, "\(theme)-01-history-top")
-        app.webViews.firstMatch.swipeUp(); capture(app, "\(theme)-02-history-scrolled")
+        let web = app.webViews.firstMatch
+        web.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(forDuration: 0.1, thenDragTo: web.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        capture(app, "\(theme)-02-history-scrolled")
         let open = app.webViews.buttons["Открыть"].firstMatch
-        XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); if !open.isHittable { web.swipeUp() }; XCTAssertTrue(open.isHittable); open.tap()
         let results = app.buttons["native-tab-results"]
         XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: results); waitForExpectations(timeout: 10)
         capture(app, "\(theme)-03-calculation-long-title")
@@ -53,7 +57,7 @@ final class SplitVisualTests: XCTestCase {
         capture(app, "\(theme)-06-share-preview")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
-        let nativeCopy = app.buttons.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
+        let nativeCopy = app.cells.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
         XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
         capture(app, "\(theme)-07-system-share")
         app.terminate()

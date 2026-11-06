@@ -15,7 +15,9 @@
    try{const model=SplitReports.build(record,{unsaved:api.unsaved()});snapshot={model,title:model.title,text:SplitReports.text(model)};}catch(_){api.toast('Не удалось сформировать корректный отчёт. Проверьте данные расчёта.');return;}
    dialog.querySelector('.share-text-details').open=false;
    $('share-text').value=snapshot.text;$('share-warning').textContent=snapshot.model.warnings.join(' ');$('share-warning').hidden=!snapshot.model.warnings.length;
-   $('share-image').hidden=true;$('share-pages').hidden=true;$('share-system').disabled=true;$('share-png-actions').hidden=true;status.textContent='Готовим PNG на устройстве…';dialog.showModal();
+   $('share-image').hidden=true;$('share-pages').hidden=true;$('share-system').disabled=true;$('share-png-actions').hidden=true;status.textContent='Готовим PNG на устройстве…';
+   try{await root.SplitNative?.beforeModalOpen?.();}catch(_){api.toast('Не удалось открыть предпросмотр. Повторите попытку.');return;}
+   try { dialog.showModal(); } finally { root.SplitNative?.afterModalOpen?.(); }
    try{
     const rendered=await SplitReports.png(snapshot.model,document.documentElement.dataset.theme);
     if(token!==generation)return;pages=rendered;

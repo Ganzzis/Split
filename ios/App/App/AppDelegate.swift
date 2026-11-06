@@ -114,6 +114,8 @@ public class SplitDocumentsPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
 }
 
 class SplitViewController: CAPBridgeViewController {
+    var chromeHTMLModalOpen = false
+    var chromeKeyboardVisible = false
     var chromeContentKey = ""
     weak var chromeTitleLabel: UILabel?
     let chromeModel = SplitChromeModel()
@@ -128,7 +130,7 @@ class SplitViewController: CAPBridgeViewController {
            let encoded = try? JSONSerialization.data(withJSONObject: [fixture]),
            let literal = String(data: encoded, encoding: .utf8) {
             let theme = ProcessInfo.processInfo.environment["SPLIT_UI_TEST_THEME"] == "dark" ? "dark" : "light"
-            let source = "localStorage.setItem('split-history-v4', " + literal + "[0]); localStorage.setItem('split-theme', '" + theme + "');"
+            let source = "window.__SPLIT_UI_TESTS__ = true; localStorage.setItem('split-history-v4', " + literal + "[0]); localStorage.setItem('split-theme', '" + theme + "');"
             webView?.configuration.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
         #endif

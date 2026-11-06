@@ -131,7 +131,7 @@ public class SplitChromePlugin: CAPPlugin, CAPBridgedPlugin, UIAdaptivePresentat
         DispatchQueue.main.async {
             guard let vc = self.bridge?.viewController as? SplitViewController else { call.reject("Native chrome unavailable"); return }
             vc.updateChrome(plugin: self, section: call.getString("view") ?? "history", title: call.getString("title") ?? "Расчёт", hasCurrent: call.getBool("hasCurrent") ?? false, dark: call.getBool("dark") ?? false, modal: call.getBool("modal") ?? false, scrolled: call.getBool("scrolled") ?? false)
-            call.resolve()
+            call.resolve(["tabsHidden": vc.floatingHost?.view.isHidden ?? true])
         }
     }
     @objc func presentSheet(_ call: CAPPluginCall) {
@@ -177,6 +177,8 @@ final class SplitRootController: UIViewController {
 
 extension SplitViewController {
     func updateChrome(plugin: SplitChromePlugin, section: String, title: String, hasCurrent: Bool, dark: Bool, modal: Bool, scrolled: Bool) {
+        chromeHTMLModalOpen = modal
+        refreshFloatingVisibility()
         let key = "\(section)|\(title)|\(hasCurrent)|\(dark)|\(modal)|\(traitCollection.preferredContentSizeCategory.rawValue)|\(UIAccessibility.isReduceTransparencyEnabled)|\(view.bounds.width)"
         if chromeContentKey == key { chromeTitleLabel?.alpha = scrolled ? 0.88 : 1; return }
         chromeContentKey = key
@@ -214,8 +216,7 @@ extension SplitViewController {
             NotificationCenter.default.addObserver(self, selector: #selector(chromeTypeChanged), name: UIContentSizeCategory.didChangeNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(chromeTypeChanged), name: UIAccessibility.reduceTransparencyStatusDidChangeNotification, object: nil)
         }
-        floatingHost?.view.isUserInteractionEnabled = !modal
-        floatingHost?.view.accessibilityElementsHidden = modal
+        refreshFloatingVisibility()
         navigationController?.navigationBar.accessibilityElementsHidden = modal
         webView?.accessibilityViewIsModal = modal
         navigationController?.navigationBar.accessibilityIdentifier = "split-native-navigation"
@@ -267,9 +268,19 @@ extension SplitViewController {
             self.webView?.evaluateJavaScript("document.documentElement.style.setProperty('--ios-native-tab-height','\(height)px');document.documentElement.style.setProperty('--ios-type-scale','\(scale)');document.documentElement.classList.toggle('ios-reduced-transparency',\(UIAccessibility.isReduceTransparencyEnabled ? "true" : "false"));")
         }
     }
+    // UIKit overlay visibility has one owner. Keyboard dismissal cannot revive tabs
+    // while WKWebView still has an open dialog (including native-proxied dialogs).
+    func refreshFloatingVisibility() {
+        let hidden = chromeHTMLModalOpen || chromeKeyboardVisible
+        floatingHost?.view.isHidden = hidden
+        floatingHost?.view.isUserInteractionEnabled = !hidden
+        floatingHost?.view.accessibilityElementsHidden = hidden
+    }
     @objc func chromeTypeChanged() { chromeModel.action?("refresh", nil) }
     @objc func chromeKeyboard(_ note: Notification) {
         guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect, let window = view.window else { return }
-        floatingHost?.view.isHidden = frame.minY < window.bounds.height - 50
+        chromeKeyboardVisible = frame.minY < window.bounds.height - 50
+        refreshFloatingVisibility()
+        chromeModel.action?("refresh", nil)
     }
 }

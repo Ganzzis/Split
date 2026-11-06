@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ruby scripts/add-ios-visual-tests.rb
-trap 'xcrun xcresulttool export attachments --path ios/visual-artifacts/Visual.xcresult --output-path ios/visual-artifacts/screenshots || true' EXIT
+trap 'for result in ios/visual-artifacts/*.xcresult; do xcrun xcresulttool export attachments --path "$result" --output-path "${result%.xcresult}-screenshots" || true; done' EXIT
 mkdir -p ios/visual-artifacts
 sim_id=$(python3 - <<'PY'
 import json,subprocess
@@ -18,4 +18,15 @@ xcrun simctl status_bar "$sim_id" override --time '9:41' --dataNetwork wifi --wi
 xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
   -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$sim_id" \
   -derivedDataPath ios/DerivedData -resultBundlePath ios/visual-artifacts/Visual.xcresult \
-  CODE_SIGNING_ALLOWED=NO test
+  -skip-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare CODE_SIGNING_ALLOWED=NO test
+
+# A real compact Simulator, with Accessibility XL text, not merely a resized screenshot.
+runtime=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print(next(r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and "iOS-26" in r["identifier"]))')
+xcrun simctl shutdown "$sim_id" || true
+small_id=$(xcrun simctl create Split-Compact com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation "$runtime")
+xcrun simctl boot "$small_id"
+xcrun simctl bootstatus "$small_id" -b
+xcodebuild -project ios/App/App.xcodeproj -scheme SplitVisualTests \
+  -parallel-testing-enabled NO -configuration Debug -destination "platform=iOS Simulator,id=$small_id" \
+  -derivedDataPath ios/DerivedData -resultBundlePath ios/visual-artifacts/Compact.xcresult \
+  -only-testing:SplitVisualTests/SplitVisualTests/testSmallScreenShare CODE_SIGNING_ALLOWED=NO test

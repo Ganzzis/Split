@@ -4,12 +4,13 @@ final class SplitVisualTests: XCTestCase {
     let longTitle = "Большое путешествие с друзьями — Санкт-Петербург и Карелия"
     func fixture() -> String {
         let records: [[String: Any]] = (0..<24).map { index in
-            let people: [[String: Any]] = [["id": "p1", "name": "Анна", "paid": index == 0 ? 0 : 12345.67], ["id": "p2", "name": "Борис", "paid": 0]]
+            var people: [[String: Any]] = [["id": "p1", "name": "Анна", "paid": index == 0 ? 0 : 12345.67], ["id": "p2", "name": "Борис", "paid": 0]]
+            if index == 0 { people += (3...24).map { ["id": "p\($0)", "name": "Участник \($0)", "paid": 0] as [String: Any] } }
             var state: [String: Any] = ["target": "", "people": people, "transfers": [], "drafts": [:]]
             if index == 0 {
                 state["mode"] = "items"; state["payments"] = []
                 state["expenses"] = (0..<32).map { number -> [String: Any] in
-                    ["id": "expense-\(number)", "title": "Кофе, прогулки и общие планы · \(number+1)", "amount": "450.01", "payerId": "p1", "split": "equal", "shares": [["personId": "p1", "value": ""], ["personId": "p2", "value": ""]]]
+                    ["id": "expense-\(number)", "title": "Кофе, прогулки и общие планы · \(number+1)", "amount": "450.01", "payerId": "p1", "split": "equal", "shares": people.map { ["personId": $0["id"]!, "value": ""] }]
                 }
             }
             return ["id": "fixture-\(index)", "name": index == 0 ? longTitle : "Встреча с друзьями · \(index)", "updatedAt": "2026-11-06T12:00:00.000Z", "state": state]
@@ -19,10 +20,11 @@ final class SplitVisualTests: XCTestCase {
     func capture(_ app: XCUIApplication, _ name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
     }
-    func runFlow(theme: String) {
+    func runFlow(theme: String, largeType: Bool = false) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--split-ui-tests", "-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU"]
+        if largeType { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"] }
         app.launchEnvironment["SPLIT_UI_TEST_FIXTURE"] = fixture(); app.launchEnvironment["SPLIT_UI_TEST_THEME"] = theme
         app.launch()
         XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 30))
@@ -54,14 +56,43 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(system.waitForExistence(timeout: 20))
         let ready = NSPredicate(format: "enabled == true")
         expectation(for: ready, evaluatedWith: system); waitForExpectations(timeout: 30)
+        XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].waitForExistence(timeout: 10), "UIKit must actually hide the sibling tab view")
+        XCTAssertFalse(app.buttons["native-tab-history"].exists)
+        let copy = app.webViews.buttons["Копировать текст"].firstMatch
+        XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
+        copy.tap()
+        XCTAssertTrue(app.webViews.staticTexts["Текст отчёта скопирован."].waitForExistence(timeout: 10), "Real copy button must receive the tap")
         capture(app, "\(theme)-06-share-preview")
+        // Scroll the long PNG preview without moving the footer actions out of reach.
+        let dialogWeb = app.webViews.firstMatch
+        dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        XCTAssertTrue(copy.isHittable); XCTAssertTrue(system.isHittable)
+        capture(app, "\(theme)-06b-share-scrolled")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
         let nativeCopy = app.cells.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
         XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
         capture(app, "\(theme)-07-system-share")
+        nativeCopy.tap()
+        XCTAssertTrue(system.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].exists)
+        let png = app.webViews.links["Отправить эту PNG-страницу"].firstMatch
+        // PNG-only sharing also exercises Filesystem/File URL → real UIActivityViewController.
+        for _ in 0..<16 {
+            if png.exists && png.isHittable { break }
+            dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
+        }
+        XCTAssertTrue(png.isHittable, "PNG action must be reachable in scrollable preview")
+        png.tap(); XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15)); nativeCopy.tap()
+        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
+        XCTAssertTrue(close.isHittable); close.tap()
+        XCTAssertTrue(app.webViews.staticTexts["native-tabs-visible"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["native-tab-history"].isHittable)
+        app.buttons["native-tab-history"].tap()
+        capture(app, "\(theme)-08-tabs-restored")
         app.terminate()
     }
+    func testSmallScreenShare() { runFlow(theme: "light", largeType: true) }
     func testLargeType() {
         let app = XCUIApplication()
         app.launchArguments = ["--split-ui-tests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"]

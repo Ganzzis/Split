@@ -64,7 +64,7 @@ if (Capacitor.isNativePlatform()) {
 
  const vault = backupVault({ Preferences, digest: backupDigest, validate: raw => SplitHistory.decodeBackup(raw) });
  let backupRequested = false;
- window.SplitNative = {
+ window.SplitNative = { ...window.SplitNative,
   async exportJSON(raw, name) {
    if (backupRequested) { backupRequested = false; await vault.save(raw); await notify('Резервная копия записана и проверена. Исходная история не изменена. Для защиты от удаления приложения также сохраните JSON в Файлы.'); return; }
    await Documents.exportJSON({ raw, name });

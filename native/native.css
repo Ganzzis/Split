@@ -68,3 +68,9 @@ html.split-native {--native-vh:100dvh;--native-top:env(safe-area-inset-top,0px);
 .ios-native-chrome .expense-amount {font-size:calc(27px * var(--ios-type-scale,1));}
 .ios-native-chrome input,.ios-native-chrome select {font-size:calc(16px * var(--ios-type-scale,1));}
 .ios-reduced-transparency * {backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+
+/* Header and actions are outside the one scrollable preview; no tab-bar padding hack. */
+.split-native .share-dialog {overflow:hidden;}
+.split-native .share-dialog::before {flex-shrink:0;}
+.split-native .native-sheet-content {flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.split-native .share-dialog .sheet-heading {position:static;}

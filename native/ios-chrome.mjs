@@ -1,16 +1,49 @@
 // Native owns presentation; the existing web shell remains the single navigation authority.
 export async function installIOSChrome({ Chrome, document, window }) {
- let pending = false, last = '';
+ let preparingModal = false;
+ let pending = false, last = '', revision = 0, activeKey = '', activePromise, lastReply;
  const state = () => ({ view: document.body.dataset.view || 'history', title: document.querySelector('#editor-title')?.textContent || 'Расчёт',
   hasCurrent: !document.querySelector('.mobile-dock [data-view="calculation"]').disabled,
-  dark: document.documentElement.dataset.theme === 'dark', modal: !!document.querySelector('dialog[open]'), viewportWidth: window.innerWidth, scrolled: window.scrollY > 16 });
+  dark: document.documentElement.dataset.theme === 'dark', modal: preparingModal || !!document.querySelector('dialog[open]'), viewportWidth: window.innerWidth, scrolled: window.scrollY > 16 });
+ const publishProbe = reply => {
+  // XCTest-only: the acknowledgement reports the real UIKit isHidden property,
+  // not a second JS prediction of whether tabs ought to be hidden.
+  if (!window.__SPLIT_UI_TESTS__ || typeof reply?.tabsHidden !== 'boolean') return;
+  let probe = document.getElementById('native-tabs-probe');
+  if (!probe) {
+   probe = document.createElement('span'); probe.id = 'native-tabs-probe';
+   probe.style.cssText = 'position:absolute;top:1px;left:1px;font-size:1px;color:transparent;pointer-events:none';
+  }
+  const text = reply.tabsHidden ? 'native-tabs-hidden' : 'native-tabs-visible';
+  if (probe.textContent !== text) probe.textContent = text;
+  const parent = [...document.querySelectorAll('dialog[open]')].at(-1) || document.body;
+  if (probe.parentElement !== parent) parent.append(probe);
+ };
+ const send = async override => {
+  const next = {...state(), ...override}, key = JSON.stringify(next);
+  if (last === key && !activeKey) { publishProbe(lastReply); return lastReply; }
+  if (activeKey === key) return activePromise;
+  const ticket = ++revision; activeKey = key;
+  activePromise = Chrome.setState(next);
+  try {
+   const reply = await activePromise;
+   if (ticket === revision) { last = key; lastReply = reply; publishProbe(reply); document.documentElement.classList.add('ios-native-chrome'); }
+   return reply;
+  } finally { if (ticket === revision) activeKey = ''; }
+ };
  const sync = () => {
   if (pending) return; pending = true;
-  window.requestAnimationFrame(async () => {
-   pending = false; const next = state(), key = JSON.stringify(next); if (last === key) return;
-   try { await Chrome.setState(next); last = key; document.documentElement.classList.add('ios-native-chrome'); } catch (_) { /* retain HTML controls on bridge failure */ }
-  });
+  window.requestAnimationFrame(() => { pending = false; send().catch(() => {}); });
  };
+ window.SplitNative ||= {};
+ window.SplitNative.beforeModalOpen = async () => {
+  preparingModal = true;
+  try {
+   const reply = await send();
+   if (reply?.tabsHidden !== true) throw Error('Native tabs did not acknowledge hiding');
+  } catch (error) { preparingModal = false; sync(); throw error; }
+ };
+ window.SplitNative.afterModalOpen = () => { preparingModal = false; sync(); };
  await Chrome.addListener('action', ({ action, view }) => {
   if (action === 'refresh') last = '';
   if (action === 'navigate') document.querySelector(`.mobile-dock [data-view="${['history','calculation','results'].includes(view) ? view : 'history'}"]`)?.click();
@@ -23,7 +56,14 @@ export async function installIOSChrome({ Chrome, document, window }) {
  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
  observer.observe(document.querySelector('#editor-title'), { childList: true, subtree: true });
  observer.observe(document.querySelector('.mobile-dock [data-view="calculation"]'), { attributes: true, attributeFilter: ['disabled'] });
- for (const dialog of document.querySelectorAll('dialog')) observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
+ const modalSync = () => { send().catch(() => {}); };
+ const modalObserver = new MutationObserver(modalSync);
+ modalObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
+ for (const dialog of document.querySelectorAll('dialog')) {
+  const open = dialog.showModal.bind(dialog);
+  dialog.showModal = () => { open(); modalSync(); };
+  dialog.addEventListener('close', modalSync);
+ }
  window.addEventListener('scroll', sync, { passive: true });
  window.addEventListener('resize', sync, { passive: true });
  // Preserve all existing validation/storage handlers; native sheets only collect intent.

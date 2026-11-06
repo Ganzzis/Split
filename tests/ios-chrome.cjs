@@ -30,6 +30,13 @@ const assert = require('node:assert/strict');
   assert.deepEqual(after.state,before.state); assert.equal(after.id,before.id); assert.equal(after.name,'Новое имя');
   await page.evaluate(()=>listeners['SplitChrome.action']({action:'navigate',view:'calculation'}));
   await page.waitForFunction(()=>chromeState.view==='calculation');
+  // Dynamically added, stacked and removed dialogs must all hold native chrome hidden.
+  await page.evaluate(()=>{ for(const id of ['dynamic-one','dynamic-two']) { const d=document.createElement('dialog');d.id=id;document.body.append(d);d.showModal(); } });
+  await page.waitForFunction(()=>chromeState.modal);
+  await page.evaluate(()=>document.getElementById('dynamic-two').remove());
+  await page.waitForTimeout(100); assert.equal(await page.evaluate(()=>chromeState.modal),true);
+  await page.evaluate(()=>document.getElementById('dynamic-one').close());
+  await page.waitForFunction(()=>!chromeState.modal);
   await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw new DOMException('Quota','QuotaExceededError');};});
   await page.locator('.person-paid').first().fill('10');
   await page.evaluate(()=>listeners['SplitChrome.action']({action:'back'}));

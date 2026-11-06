@@ -11,7 +11,7 @@ module.exports = function installBridge({ platform = 'android' } = {}) {
     nativeCallback(plugin, method, data, callback) { window.listeners[plugin + '.' + data.eventName] = callback; return 'listener'; },
     async nativePromise(plugin, method, data = {}) {
      window.calls.push({ plugin, method, data });
-     if (plugin === 'SplitChrome') { if (method === 'setState') { window.chromeState = data; return {}; } if (method === 'presentSheet') return window.deferSheet ? new Promise(resolve => window.resolveSheet = resolve) : (window.sheetResponse || {confirmed:false,value:''}); }
+     if (plugin === 'SplitChrome') { if (method === 'setState') { window.chromeState = data; return {tabsHidden:!!data.modal}; } if (method === 'presentSheet') return window.deferSheet ? new Promise(resolve => window.resolveSheet = resolve) : (window.sheetResponse || {confirmed:false,value:''}); }
      if (plugin === 'Preferences') {
       if (method === 'get') return { value: window.prefs[data.key] ?? null };
       window.prefs[data.key] = data.value; return {};

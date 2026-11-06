@@ -74,3 +74,7 @@ html.split-native {--native-vh:100dvh;--native-top:env(safe-area-inset-top,0px);
 .split-native .share-dialog::before {flex-shrink:0;}
 .split-native .native-sheet-content {flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .split-native .share-dialog .sheet-heading {position:static;}
+/* Follow UIKit's preferred text size in the hybrid Share surface as well. */
+.ios-native-chrome .share-dialog {font-size:calc(16px * var(--ios-type-scale,1));}
+.ios-native-chrome .share-dialog .sheet-heading h2 {font-size:calc(20px * var(--ios-type-scale,1));}
+.ios-native-chrome .share-dialog button,.ios-native-chrome .share-dialog a,.ios-native-chrome .share-dialog textarea,.ios-native-chrome .share-dialog summary {font-size:inherit;}

@@ -113,7 +113,7 @@ final class SplitVisualTests: XCTestCase {
         let reportText = app.webViews.textViews.firstMatch
         XCTAssertTrue(reportText.waitForExistence(timeout: 10))
         let close = app.webViews.buttons["Закрыть обмен"].firstMatch
-        let scrollBounds = CGRect(x: 24, y: close.frame.maxY + 12, width: app.frame.width - 48,
+        let scrollBounds = CGRect(x: 24, y: close.frame.maxY + 12, width: dialogWeb.frame.width - 48,
                                   height: system.frame.minY - close.frame.maxY - 24)
         for _ in 0..<12 {
             if reportText.frame.intersection(scrollBounds).height > 60 { break }

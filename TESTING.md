@@ -147,3 +147,9 @@ PWA-тест теперь берёт исходную версию кэша из
 Обязателен повторный ручной прогон Xiaomi (текст, 1 PNG, несколько PNG, отмена)
 и iPhone/GBox (подпись, запуск, Share/Files, VoiceOver, крупный текст, Reduce Motion,
 Reduce Transparency, Home Indicator, landscape и клавиатура).
+
+Визуальный просмотр Simulator выявил и исправил различие темы native-container/WKWebView,
+пересоздание панели при прокрутке и перенос подписи вкладки при Accessibility XL.
+Подписи native tab bar ограничены диапазоном размеров до XXXL; VoiceOver сохраняет
+полные названия и выбранную вкладку, long press поддерживает Large Content Viewer.
+Содержимое и заголовки продолжают масштабироваться отдельно.

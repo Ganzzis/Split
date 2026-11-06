@@ -37,7 +37,7 @@ struct SplitFloatingTabs: View {
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: tab.2).font(.system(size: 21, weight: .medium))
-                        Text(tab.1).font(.caption2.weight(.semibold))
+                        Text(tab.1).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.85)
                     }
                     .frame(maxWidth: .infinity).frame(minHeight: 55)
                     .foregroundStyle(model.section == tab.0 ? Color.splitAccent : Color.primary.opacity(0.7))
@@ -54,9 +54,11 @@ struct SplitFloatingTabs: View {
                 .accessibilityLabel(tab.1)
                 .accessibilityAddTraits(model.section == tab.0 ? .isSelected : [])
                 .accessibilityIdentifier("native-tab-" + tab.0)
+                .accessibilityShowsLargeContentViewer { Label(tab.1, systemImage: tab.2) }
             }
         }
         .padding(6)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .animation(reduceMotion ? nil : .spring(response: 0.36, dampingFraction: 0.82), value: model.section)
     }
     var body: some View {

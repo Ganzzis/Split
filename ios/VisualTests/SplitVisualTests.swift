@@ -70,10 +70,11 @@ final class SplitVisualTests: XCTestCase {
         capture(app, "\(theme)-06b-share-scrolled")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
-        let nativeCopy = app.cells.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch
+        var nativeCopy: XCUIElement { app.cells.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch }
         XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
         capture(app, "\(theme)-07-system-share")
         nativeCopy.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
         XCTAssertTrue(system.waitForExistence(timeout: 15))
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].exists)
         let png = app.webViews.links["Отправить эту PNG-страницу"].firstMatch
@@ -83,7 +84,8 @@ final class SplitVisualTests: XCTestCase {
             dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
         }
         XCTAssertTrue(png.isHittable, "PNG action must be reachable in scrollable preview")
-        png.tap(); XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15)); nativeCopy.tap()
+        png.tap(); XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); nativeCopy.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
         let textPreview = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == 'Текст отчёта'")).firstMatch
         for _ in 0..<12 {
             if textPreview.exists && textPreview.isHittable { break }

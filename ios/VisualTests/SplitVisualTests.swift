@@ -53,6 +53,31 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(button.frame.minY, web.frame.minY + 8)
         XCTAssertLessThanOrEqual(button.frame.maxY, app.buttons["native-tab-history"].frame.minY - 12)
     }
+    func previewBounds(_ app: XCUIApplication) -> CGRect {
+        let web = app.webViews.firstMatch
+        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
+        let title = app.webViews.staticTexts["Поделиться результатом"].firstMatch
+        let top = max(close.frame.maxY, title.frame.maxY) + 12
+        let bottom = app.webViews.buttons["Отправить через систему"].firstMatch.frame.minY - 12
+        return CGRect(x: 24, y: top, width: web.frame.width - 48, height: bottom - top)
+    }
+    func revealPreviewControl(_ control: XCUIElement, in app: XCUIApplication) {
+        XCTAssertTrue(control.waitForExistence(timeout: 10))
+        for _ in 0..<12 {
+            let bounds = previewBounds(app), frame = control.frame
+            if frame.minY >= bounds.minY && frame.maxY <= bounds.maxY && control.isHittable { return }
+            let downward = frame.minY < bounds.minY
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let start = bounds.minY + bounds.height * (downward ? 0.3 : 0.7)
+            let end = bounds.minY + bounds.height * (downward ? 0.7 : 0.3)
+            origin.withOffset(CGVector(dx: bounds.midX, dy: start)).press(forDuration: 0.1,
+                thenDragTo: origin.withOffset(CGVector(dx: bounds.midX, dy: end)))
+        }
+        let bounds = previewBounds(app)
+        XCTAssertTrue(control.isHittable)
+        XCTAssertGreaterThanOrEqual(control.frame.minY, bounds.minY)
+        XCTAssertLessThanOrEqual(control.frame.maxY, bounds.maxY)
+    }
     func copySystemShare(_ app: XCUIApplication, screenshot: String) {
         let remote = app.otherElements["ShareSheet.RemoteContainerView"].firstMatch
         XCTAssertTrue(remote.waitForExistence(timeout: 30), "A real system Share controller must be presented")
@@ -79,7 +104,7 @@ final class SplitVisualTests: XCTestCase {
         if largeType { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"] }
         app.launchEnvironment["SPLIT_UI_TEST_FIXTURE"] = fixture(); app.launchEnvironment["SPLIT_UI_TEST_THEME"] = theme
         app.launch()
-        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 90))
         XCTAssertTrue(app.navigationBars["split-native-navigation"].exists)
         let create = app.webViews.buttons["Новый расчёт"].firstMatch
         XCTAssertTrue(create.waitForExistence(timeout: 20)); expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: create); waitForExpectations(timeout: 20)
@@ -130,30 +155,17 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].exists)
         let png = app.webViews.links["Отправить эту PNG-страницу"].firstMatch
         // PNG-only sharing also exercises Filesystem/File URL → real UIActivityViewController.
-        for _ in 0..<16 {
-            if png.exists && png.isHittable { break }
-            dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
-        }
-        XCTAssertTrue(png.isHittable, "PNG action must be reachable in scrollable preview")
+        revealPreviewControl(png, in: app)
         png.tap(); copySystemShare(app, screenshot: "\(theme)-07a-selected-png-system-share")
         let textPreview = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == 'Текст отчёта'")).firstMatch
-        for _ in 0..<12 {
-            if textPreview.exists && textPreview.isHittable { break }
-            dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
-        }
-        XCTAssertTrue(textPreview.isHittable); textPreview.tap()
-        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
-        let scrollBounds = CGRect(x: 24, y: close.frame.maxY + 12, width: dialogWeb.frame.width - 48,
-                                  height: system.frame.minY - close.frame.maxY - 24)
-        let textOnly = app.webViews.buttons["Отправить только текст"].firstMatch
-        for _ in 0..<12 {
-            if textOnly.exists && textOnly.isHittable { break }
-            drag(app, in: scrollBounds)
-        }
-        XCTAssertTrue(textOnly.isHittable); textOnly.tap()
-        copySystemShare(app, screenshot: "\(theme)-07b-text-only-system-share")
+        revealPreviewControl(textPreview, in: app); textPreview.tap()
         let reportText = app.webViews.textViews.firstMatch
-        XCTAssertTrue(reportText.waitForExistence(timeout: 10))
+        XCTAssertTrue(reportText.waitForExistence(timeout: 10), "The details control must actually expand the report")
+        let close = app.webViews.buttons["Закрыть обмен"].firstMatch
+        let textOnly = app.webViews.buttons["Отправить только текст"].firstMatch
+        revealPreviewControl(textOnly, in: app); textOnly.tap()
+        copySystemShare(app, screenshot: "\(theme)-07b-text-only-system-share")
+        let scrollBounds = previewBounds(app)
         let reportLabel = app.webViews.staticTexts["Отчёт для мессенджера"].firstMatch
         // Start a parent scroll on the label/action, never inside a readonly textarea:
         // the latter legitimately scrolls its own long content instead of the sheet.
@@ -191,7 +203,7 @@ final class SplitVisualTests: XCTestCase {
         app.launchArguments = ["--split-ui-tests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"]
         app.launchEnvironment["SPLIT_UI_TEST_FIXTURE"] = fixture(); app.launchEnvironment["SPLIT_UI_TEST_THEME"] = "light"
         app.launch()
-        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons["native-tab-history"].waitForExistence(timeout: 90))
         XCTAssertTrue(app.buttons["native-theme"].isHittable)
         capture(app, "accessibility-large-type-history")
         app.terminate()

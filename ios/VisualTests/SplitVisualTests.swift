@@ -57,12 +57,12 @@ final class SplitVisualTests: XCTestCase {
         let remote = app.otherElements["ShareSheet.RemoteContainerView"].firstMatch
         XCTAssertTrue(remote.waitForExistence(timeout: 30), "A real system Share controller must be presented")
         let names = ["Копировать", "Скопировать", "Copy"]
-        let predicate = NSPredicate(format: "label IN %@", names)
+        let predicate = NSPredicate(format: "label IN %@", names as NSArray)
         let copyCell = app.cells.matching(predicate).firstMatch
         let copyButton = app.buttons.matching(predicate).firstMatch
         // iOS 26 groups actions behind More in compact Accessibility layouts.
         // Restrict this to the actions group, not the separate More-apps button.
-        let more = app.cells.matching(NSPredicate(format: "identifier == 'actionGroupCell' AND label IN %@", ["More", "Ещё", "Еще"])).firstMatch
+        let more = app.cells.matching(NSPredicate(format: "identifier == 'actionGroupCell' AND label IN %@", ["More", "Ещё", "Еще"] as NSArray)).firstMatch
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in copyCell.exists || copyButton.exists || more.exists }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
         if !copyCell.exists && !copyButton.exists { XCTAssertTrue(more.isHittable); more.tap() }

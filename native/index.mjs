@@ -108,5 +108,8 @@ if (Capacitor.isNativePlatform()) {
  sheet.querySelector('.sheet-heading').after(body);
  // Keep the text action ahead of the readonly preview's independent scroll area.
  sheet.querySelector('.share-text-details summary').after(document.querySelector('#share-download-text'));
- document.querySelector('#share-download-text').onclick = () => Share.share({ title: 'Split', text: document.querySelector('#share-text').value }).catch(() => notify('Системный обмен не выполнен.'));
+ document.querySelector('#share-download-text').onclick = async () => {
+  try { const result = await SplitReports.adapter().share({ title: 'Split', text: document.querySelector('#share-text').value, files: [] }); if (result.status === 'fallback') await notify(result.reason); }
+  catch (_) { await notify('Системный обмен не выполнен.'); }
+ };
 }

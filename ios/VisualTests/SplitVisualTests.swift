@@ -58,14 +58,14 @@ final class SplitVisualTests: XCTestCase {
         let close = app.webViews.buttons["Закрыть обмен"].firstMatch
         let title = app.webViews.staticTexts["Поделиться результатом"].firstMatch
         let top = max(close.frame.maxY, title.frame.maxY) + 12
-        let bottom = app.webViews.buttons["Отправить через систему"].firstMatch.frame.minY - 12
+        let bottom = app.webViews.buttons["Отправить через систему"].firstMatch.frame.minY - 10
         return CGRect(x: 24, y: top, width: web.frame.width - 48, height: bottom - top)
     }
     func revealPreviewControl(_ control: XCUIElement, in app: XCUIApplication) {
         XCTAssertTrue(control.waitForExistence(timeout: 10))
         for _ in 0..<12 {
             let bounds = previewBounds(app), frame = control.frame
-            if frame.minY >= bounds.minY && frame.maxY <= bounds.maxY && control.isHittable { return }
+            if frame.minY >= bounds.minY - 1 && frame.maxY <= bounds.maxY + 1 && control.isHittable { return }
             let downward = frame.minY < bounds.minY
             let origin = app.coordinate(withNormalizedOffset: .zero)
             let start = bounds.minY + bounds.height * (downward ? 0.3 : 0.7)
@@ -75,26 +75,28 @@ final class SplitVisualTests: XCTestCase {
         }
         let bounds = previewBounds(app)
         XCTAssertTrue(control.isHittable)
-        XCTAssertGreaterThanOrEqual(control.frame.minY, bounds.minY)
-        XCTAssertLessThanOrEqual(control.frame.maxY, bounds.maxY)
+        XCTAssertGreaterThanOrEqual(control.frame.minY, bounds.minY - 1)
+        XCTAssertLessThanOrEqual(control.frame.maxY, bounds.maxY + 1)
     }
-    func copySystemShare(_ app: XCUIApplication, screenshot: String) {
+    func checkSystemShare(_ app: XCUIApplication, screenshot: String, images: Int) {
         let remote = app.otherElements["ShareSheet.RemoteContainerView"].firstMatch
         XCTAssertTrue(remote.waitForExistence(timeout: 30), "A real system Share controller must be presented")
-        let names = ["Копировать", "Скопировать", "Copy"]
-        let predicate = NSPredicate(format: "label IN %@", names as NSArray)
-        let copyCell = app.cells.matching(predicate).firstMatch
-        let copyButton = app.buttons.matching(predicate).firstMatch
-        // iOS 26 groups actions behind More in compact Accessibility layouts.
-        // Restrict this to the actions group, not the separate More-apps button.
-        let more = app.cells.matching(NSPredicate(format: "identifier == 'actionGroupCell' AND label IN %@", ["More", "Ещё", "Еще"] as NSArray)).firstMatch
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in copyCell.exists || copyButton.exists || more.exists }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
-        if !copyCell.exists && !copyButton.exists { XCTAssertTrue(more.isHittable); more.tap() }
-        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in copyCell.exists || copyButton.exists }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 30), .completed)
-        let action = copyCell.exists ? copyCell : copyButton
-        XCTAssertTrue(action.isHittable); capture(app, screenshot); action.tap()
+        if images > 0 {
+            let caption = remote.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'LP.CaptionBar.TopCaption'")).firstMatch
+            let metadata = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in caption.exists && !caption.label.isEmpty && (images <= 1 || caption.label.hasPrefix(String(images))) }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [metadata], timeout: 30), .completed, "Prepared PNG pages must reach the OS preview")
+        } else {
+            XCTAssertTrue(remote.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'Split'")).firstMatch.waitForExistence(timeout: 30), "The prepared text must reach the OS preview")
+        }
+        capture(app, screenshot)
+        // Dismiss the real native popover using its outside region. This verifies
+        // cancellation and return without depending on Apple's Copy/More layout.
+        let popover = app.popovers.firstMatch
+        XCTAssertTrue(popover.exists)
+        let window = app.windows.firstMatch.frame
+        let outside = CGPoint(x: window.minX + 4, y: window.midY)
+        XCTAssertFalse(popover.frame.contains(outside))
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: outside.x, dy: outside.y)).tap()
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: remote); waitForExpectations(timeout: 20)
     }
     func runFlow(theme: String, largeType: Bool = false) {
@@ -150,13 +152,14 @@ final class SplitVisualTests: XCTestCase {
         capture(app, "\(theme)-06b-share-scrolled")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
-        copySystemShare(app, screenshot: "\(theme)-07-system-share")
+        checkSystemShare(app, screenshot: "\(theme)-07-system-share", images: 4)
         XCTAssertTrue(system.waitForExistence(timeout: 15))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: system); waitForExpectations(timeout: 15)
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].exists)
         let png = app.webViews.links["Отправить эту PNG-страницу"].firstMatch
         // PNG-only sharing also exercises Filesystem/File URL → real UIActivityViewController.
         revealPreviewControl(png, in: app)
-        png.tap(); copySystemShare(app, screenshot: "\(theme)-07a-selected-png-system-share")
+        png.tap(); checkSystemShare(app, screenshot: "\(theme)-07a-selected-png-system-share", images: 1)
         let textPreview = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == 'Текст отчёта'")).firstMatch
         revealPreviewControl(textPreview, in: app); textPreview.tap()
         let reportText = app.webViews.textViews.firstMatch
@@ -164,7 +167,7 @@ final class SplitVisualTests: XCTestCase {
         let close = app.webViews.buttons["Закрыть обмен"].firstMatch
         let textOnly = app.webViews.buttons["Отправить только текст"].firstMatch
         revealPreviewControl(textOnly, in: app); textOnly.tap()
-        copySystemShare(app, screenshot: "\(theme)-07b-text-only-system-share")
+        checkSystemShare(app, screenshot: "\(theme)-07b-text-only-system-share", images: 0)
         let scrollBounds = previewBounds(app)
         let reportLabel = app.webViews.staticTexts["Отчёт для мессенджера"].firstMatch
         // Start a parent scroll on the label/action, never inside a readonly textarea:

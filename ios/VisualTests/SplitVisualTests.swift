@@ -35,6 +35,24 @@ final class SplitVisualTests: XCTestCase {
         origin.withOffset(CGVector(dx: rect.midX, dy: rect.maxY - 10)).press(forDuration: 0.1,
             thenDragTo: origin.withOffset(CGVector(dx: rect.midX, dy: rect.minY + 10)))
     }
+    func revealWebButton(_ button: XCUIElement, in app: XCUIApplication) {
+        let web = app.webViews.firstMatch
+        for _ in 0..<12 {
+            let top = web.frame.minY + 8
+            let bottom = app.buttons["native-tab-history"].frame.minY - 12
+            let frame = button.frame
+            if frame.minY >= top && frame.maxY <= bottom && button.isHittable { return }
+            let downward = frame.minY < top
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let start = top + (bottom - top) * (downward ? 0.3 : 0.7)
+            let end = top + (bottom - top) * (downward ? 0.7 : 0.3)
+            origin.withOffset(CGVector(dx: web.frame.midX, dy: start)).press(forDuration: 0.1,
+                thenDragTo: origin.withOffset(CGVector(dx: web.frame.midX, dy: end)))
+        }
+        XCTAssertTrue(button.isHittable)
+        XCTAssertGreaterThanOrEqual(button.frame.minY, web.frame.minY + 8)
+        XCTAssertLessThanOrEqual(button.frame.maxY, app.buttons["native-tab-history"].frame.minY - 12)
+    }
     func runFlow(theme: String, largeType: Bool = false) {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -51,9 +69,9 @@ final class SplitVisualTests: XCTestCase {
         web.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(forDuration: 0.1, thenDragTo: web.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
         capture(app, "\(theme)-02-history-scrolled")
         let open = app.webViews.buttons["Открыть"].firstMatch
-        XCTAssertTrue(open.waitForExistence(timeout: 10)); if !open.isHittable { web.swipeUp() }; XCTAssertTrue(open.isHittable); open.tap()
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); revealWebButton(open, in: app); open.tap()
         let results = app.buttons["native-tab-results"]
-        XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: results); waitForExpectations(timeout: 10)
+        XCTAssertTrue(results.waitForExistence(timeout: 10)); expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: results); waitForExpectations(timeout: 20)
         capture(app, "\(theme)-03-calculation-long-title")
         app.webViews.firstMatch.swipeUp(); capture(app, "\(theme)-03b-long-expense-list")
         app.buttons["native-actions"].tap(); app.buttons["Переименовать"].tap()
@@ -69,7 +87,7 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertTrue(app.navigationBars.staticTexts.matching(NSPredicate(format: "label ENDSWITH ', итоги'")).firstMatch.waitForExistence(timeout: 10))
         capture(app, "\(theme)-05-results")
         let share = app.webViews.buttons["Поделиться"].firstMatch
-        XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
+        XCTAssertTrue(share.waitForExistence(timeout: 10)); revealWebButton(share, in: app); share.tap()
         let system = app.webViews.buttons["Отправить через систему"].firstMatch
         XCTAssertTrue(system.waitForExistence(timeout: 20))
         let ready = NSPredicate(format: "enabled == true")
@@ -147,8 +165,7 @@ final class SplitVisualTests: XCTestCase {
         app.buttons["native-tab-history"].tap()
         capture(app, "\(theme)-08-tabs-restored")
         let delete = app.webViews.buttons["Удалить"].firstMatch
-        if !delete.isHittable { app.webViews.firstMatch.swipeUp() }
-        XCTAssertTrue(delete.isHittable); delete.tap()
+        revealWebButton(delete, in: app); delete.tap()
         XCTAssertTrue(app.buttons["Отмена"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["native-tab-history"].exists)
         app.buttons["Отмена"].firstMatch.tap()

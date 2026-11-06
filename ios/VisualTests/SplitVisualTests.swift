@@ -53,6 +53,25 @@ final class SplitVisualTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(button.frame.minY, web.frame.minY + 8)
         XCTAssertLessThanOrEqual(button.frame.maxY, app.buttons["native-tab-history"].frame.minY - 12)
     }
+    func copySystemShare(_ app: XCUIApplication, screenshot: String) {
+        let remote = app.otherElements["ShareSheet.RemoteContainerView"].firstMatch
+        XCTAssertTrue(remote.waitForExistence(timeout: 30), "A real system Share controller must be presented")
+        let names = ["Копировать", "Скопировать", "Copy"]
+        let predicate = NSPredicate(format: "label IN %@", names)
+        let copyCell = app.cells.matching(predicate).firstMatch
+        let copyButton = app.buttons.matching(predicate).firstMatch
+        // iOS 26 groups actions behind More in compact Accessibility layouts.
+        // Restrict this to the actions group, not the separate More-apps button.
+        let more = app.cells.matching(NSPredicate(format: "identifier == 'actionGroupCell' AND label IN %@", ["More", "Ещё", "Еще"])).firstMatch
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in copyCell.exists || copyButton.exists || more.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+        if !copyCell.exists && !copyButton.exists { XCTAssertTrue(more.isHittable); more.tap() }
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in copyCell.exists || copyButton.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 30), .completed)
+        let action = copyCell.exists ? copyCell : copyButton
+        XCTAssertTrue(action.isHittable); capture(app, screenshot); action.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: remote); waitForExpectations(timeout: 20)
+    }
     func runFlow(theme: String, largeType: Bool = false) {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -106,11 +125,7 @@ final class SplitVisualTests: XCTestCase {
         capture(app, "\(theme)-06b-share-scrolled")
         system.tap()
         // Real UIActivityViewController, not a mocked bridge. Screenshot records available Simulator targets.
-        var nativeCopy: XCUIElement { app.cells.matching(NSPredicate(format: "label == 'Копировать' OR label == 'Скопировать' OR label == 'Copy'")).firstMatch }
-        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 15))
-        capture(app, "\(theme)-07-system-share")
-        nativeCopy.tap()
-        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
+        copySystemShare(app, screenshot: "\(theme)-07-system-share")
         XCTAssertTrue(system.waitForExistence(timeout: 15))
         XCTAssertTrue(app.webViews.staticTexts["native-tabs-hidden"].exists)
         let png = app.webViews.links["Отправить эту PNG-страницу"].firstMatch
@@ -120,8 +135,7 @@ final class SplitVisualTests: XCTestCase {
             dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.60)).press(forDuration: 0.1, thenDragTo: dialogWeb.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30)))
         }
         XCTAssertTrue(png.isHittable, "PNG action must be reachable in scrollable preview")
-        png.tap(); XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); nativeCopy.tap()
-        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
+        png.tap(); copySystemShare(app, screenshot: "\(theme)-07a-selected-png-system-share")
         let textPreview = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == 'Текст отчёта'")).firstMatch
         for _ in 0..<12 {
             if textPreview.exists && textPreview.isHittable { break }
@@ -137,8 +151,7 @@ final class SplitVisualTests: XCTestCase {
             drag(app, in: scrollBounds)
         }
         XCTAssertTrue(textOnly.isHittable); textOnly.tap()
-        XCTAssertTrue(nativeCopy.waitForExistence(timeout: 30)); capture(app, "\(theme)-07b-text-only-system-share"); nativeCopy.tap()
-        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: nativeCopy); waitForExpectations(timeout: 15)
+        copySystemShare(app, screenshot: "\(theme)-07b-text-only-system-share")
         let reportText = app.webViews.textViews.firstMatch
         XCTAssertTrue(reportText.waitForExistence(timeout: 10))
         let reportLabel = app.webViews.staticTexts["Отчёт для мессенджера"].firstMatch

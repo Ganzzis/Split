@@ -165,3 +165,5 @@ Simulator CI использует отдельные matrix jobs `standard` (iPh
 Косметический `simctl status_bar override` не вызывается: на macOS runner он может зависнуть даже после успешной загрузки Simulator. Время/заряд на скриншотах остаются фактическими; эта настройка не должна блокировать функциональные тесты.
 
 Перед нажатием кнопок WebView вне диалога XCTest прокручивает их целиком между верхней панелью и native Tab Bar и проверяет реальные координаты. Одного `isHittable` недостаточно: WKWebView может вернуть true для кнопки за UIKit overlay. Внутри Share дополнительно обязательны UIKit `isHidden` и реальный результат нажатия Copy.
+
+В компактном Share Sheet iOS 26 при Accessibility XL стандартные действия могут быть свёрнуты в `More`. XCTest раскрывает именно native actions group, выбирает настоящий Copy (cell/button в зависимости от системного представления) и ждёт исчезновения `ShareSheet.RemoteContainerView` перед следующей отправкой.
